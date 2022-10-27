@@ -7,8 +7,29 @@ readme = "README.md"
 packages = [{include = "backend", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.10.0"
+isort = "^5.10.1"
+pre-commit = "^2.20.0"
+taskipy = "^1.10.3"
+flake8 = "^5.0.4"
+flake8-annotations = "^2.9.1"
+flake8-bugbear = "^22.10.27"
+flake8-docstrings = "^1.6.0"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.black]
+line-length = 100
+
+[tool.taskipy.tasks]
+lint = { cmd = "pre-commit run --all-files", help = "Lints project." }
+format = { cmd = "black .", help = "Runs Black autoformatter." }
 
 [build-system]
 requires = ["poetry-core"]
