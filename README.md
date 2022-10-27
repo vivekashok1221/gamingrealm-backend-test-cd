@@ -19,4 +19,4 @@ to install the git pre-commit hooks. To manually trigger linting, run `poetry ru
 TODO: fill this in
 
 ## Database Structure
-TODO: make UML diagram and add dbdiagram link here
+[ER Diagram](https://dbdiagram.io/embed/635aaaa96848d85eee878aea)
