@@ -11,6 +11,7 @@ python = "^3.10"
 fastapi = "^0.85.1"
 prisma = "^0.7.0"
 loguru = "^0.6.0"
+uvicorn = {extras = ["fast"], version = "^0.19.0"}
 
 
 [tool.poetry.group.dev.dependencies]
@@ -33,6 +34,7 @@ line-length = 100
 [tool.taskipy.tasks]
 lint = { cmd = "pre-commit run --all-files", help = "Lints project." }
 format = { cmd = "black .", help = "Runs Black autoformatter." }
+runserver = { cmd = "uvicorn --reload src.backend.app:app", help = "Runs the backend server." }
 
 [build-system]
 requires = ["poetry-core"]

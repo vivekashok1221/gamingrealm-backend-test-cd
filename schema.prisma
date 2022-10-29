@@ -1,0 +1,99 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("GR_DATABASE_URL")
+}
+
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+model User {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String
+  username   String   @db.VarChar(20)
+  password   String
+  salt       String
+  created_at DateTime @default(now())
+
+  posts        Post[]
+  post_ratings PostRating[]
+  comments     PostComment[]
+  reports      PostReport[]
+  follows      Follower[]    @relation("Follower")
+  followers    Follower[]    @relation("Followed")
+
+  @@index([username])
+}
+
+model Follower {
+  user_id     String
+  user        User     @relation("Follower", fields: [user_id], references: [id], onDelete: Cascade)
+  follows_id  String
+  follows     User     @relation("Followed", fields: [follows_id], references: [id], onDelete: Cascade)
+  followed_at DateTime @default(now())
+
+  @@unique([user_id, follows_id])
+}
+
+model Post {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  author_id    String
+  author       User     @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  title        String   @db.VarChar(50)
+  text_content String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  deleted      Boolean  @default(false)
+
+  media    PostMedia[]
+  ratings  PostRating[]
+  comments PostComment[]
+  reports  PostReport[]
+
+  @@index([title])
+}
+
+model PostMedia {
+  id         Int    @id @default(autoincrement())
+  post_id    String
+  post       Post   @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  object_url String
+}
+
+model PostRating {
+  // composite primary key - each user can only give a single rating to post
+  post_id    String
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  author_id  String
+  author     User     @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  value      Int
+  updated_at DateTime @updatedAt
+
+  @@id([post_id, author_id])
+  @@index([post_id])
+}
+
+model PostComment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  author_id  String
+  author     User     @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  post_id    String
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  content    String
+  created_at DateTime @default(now())
+
+  @@index([post_id])
+}
+
+model PostReport {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  author_id  String
+  author     User     @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  post_id    String
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  content    String
+  created_at DateTime @default(now())
+
+  @@unique([author_id, post_id])
+}
