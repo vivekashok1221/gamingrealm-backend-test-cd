@@ -27,9 +27,9 @@ model User {
 }
 
 model Follower {
-  user_id     String
+  user_id     String   @db.Uuid
   user        User     @relation("Follower", fields: [user_id], references: [id], onDelete: Cascade)
-  follows_id  String
+  follows_id  String   @db.Uuid
   follows     User     @relation("Followed", fields: [follows_id], references: [id], onDelete: Cascade)
   followed_at DateTime @default(now())
 
@@ -38,7 +38,7 @@ model Follower {
 
 model Post {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  author_id    String
+  author_id    String   @db.Uuid
   author       User     @relation(fields: [author_id], references: [id], onDelete: Cascade)
   title        String   @db.VarChar(50)
   text_content String?
@@ -56,16 +56,16 @@ model Post {
 
 model PostMedia {
   id         Int    @id @default(autoincrement())
-  post_id    String
+  post_id    String @db.Uuid
   post       Post   @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   object_url String
 }
 
 model PostRating {
   // composite primary key - each user can only give a single rating to post
-  post_id    String
+  post_id    String   @db.Uuid
   post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  author_id  String
+  author_id  String   @db.Uuid
   author     User     @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
   value      Int
   updated_at DateTime @updatedAt
@@ -76,9 +76,9 @@ model PostRating {
 
 model PostComment {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  author_id  String
+  author_id  String   @db.Uuid
   author     User     @relation(fields: [author_id], references: [id], onDelete: Cascade)
-  post_id    String
+  post_id    String   @db.Uuid
   post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
   content    String
   created_at DateTime @default(now())
@@ -88,9 +88,9 @@ model PostComment {
 
 model PostReport {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  author_id  String
+  author_id  String   @db.Uuid
   author     User     @relation(fields: [author_id], references: [id], onDelete: Cascade)
-  post_id    String
+  post_id    String   @db.Uuid
   post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
   content    String
   created_at DateTime @default(now())
