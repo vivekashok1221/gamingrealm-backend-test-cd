@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpw
+      POSTGRES_DB: gamingrealmdb
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  gr-backend:
+    container_name: gr-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+    environment:
+      GR_DATABASE_URL: postgres://admin:adminpw@postgres:5432/gamingrealmdb
+    volumes:
+      - .:/GR-backend
+
+volumes:
+  postgres_data:
