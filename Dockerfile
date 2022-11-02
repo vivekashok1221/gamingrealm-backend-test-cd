@@ -13,8 +13,6 @@ RUN poetry install --no-root --without dev
 
 COPY ./schema.prisma .
 
-COPY ./.env .
-
 RUN poetry run prisma generate
 
 COPY . .
