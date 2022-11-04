@@ -8,7 +8,11 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: adminpw
       POSTGRES_DB: gamingrealmdb
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d gamingrealmdb"]
+      interval: 2s
+      timeout: 1s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -18,7 +22,8 @@ services:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       GR_DATABASE_URL: postgres://admin:adminpw@postgres:5432/gamingrealmdb
     volumes:
