@@ -50,8 +50,15 @@ model Post {
   ratings  PostRating[]
   comments PostComment[]
   reports  PostReport[]
+  tags     Tag[]
 
   @@index([title])
+}
+
+model Tag {
+  id       Int    @id @default(autoincrement())
+  tag_name String @unique
+  posts    Post[]
 }
 
 model PostMedia {
