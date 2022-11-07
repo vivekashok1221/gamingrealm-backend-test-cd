@@ -12,6 +12,8 @@ fastapi = "^0.85.1"
 prisma = "^0.7.0"
 loguru = "^0.6.0"
 uvicorn = {extras = ["fast"], version = "^0.19.0"}
+python-multipart = "^0.0.5"
+passlib = {extras = ["argon2"], version = "^1.7.4"}
 
 
 [tool.poetry.group.dev.dependencies]
