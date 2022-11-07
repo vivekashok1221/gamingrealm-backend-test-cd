@@ -52,18 +52,25 @@ class AbstractSessionStorage(metaclass=ABCMeta):
 
 class InMemorySessionStorage(AbstractSessionStorage):  # noqa: D101
     def __init__(self) -> None:
-        self._sessions = dict[UUID, Session]()
+        self._sessions = dict[Session.id, Session]()
+        self._logged_in_users = dict[Session.user_id, Session.id]()
 
     async def get_session(self, id: UUID) -> Session | None:  # noqa: D102
         return self._sessions.get(id)
 
     async def create_session(self, user_id: UUID) -> Session:  # noqa: D102
+        if user_id in self._logged_in_users:
+            session_id = self._logged_in_users[user_id]
+            del self._sessions[session_id]
         session = Session(user_id=user_id)
         self._sessions[session.id] = session
+        self._logged_in_users[user_id] = session.id
         return session
 
     async def delete_session(self, id: UUID) -> None:  # noqa: D102
         try:
-            self._sessions.pop(id)
+            session = self._sessions.pop(id)
         except KeyError as e:
             raise SessionDoesNotExistError(f"Session {id} does not exist.") from e
+        else:
+            self._logged_in_users.pop(session.user_id)
