@@ -1,8 +1,17 @@
 from fastapi import FastAPI
 from prisma import Prisma
 
+from src.backend.auth import authentication
+
 app = FastAPI(title="GamingRealm")
 db = Prisma(auto_register=True)
+app.include_router(authentication.router)
+
+
+@app.on_event("startup")
+async def connect_db() -> None:
+    """Creates a connection when the server starts."""
+    await db.connect()
 
 
 @app.on_event("shutdown")
