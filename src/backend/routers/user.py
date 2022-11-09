@@ -4,9 +4,9 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from loguru import logger
 from passlib.hash import argon2
+
 from prisma.models import User
 from prisma.partials import UserProfile
-
 from src.backend.auth.sessions import AbstractSessionStorage
 from src.backend.dependencies import get_sessions
 from src.backend.models import UserInLogin, UserInSignup
