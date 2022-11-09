@@ -123,7 +123,7 @@ async def logout(
     return JSONResponse(status_code=200, content=f"Session {session_id} deleted.")
 
 
-@router.get("/{user_id}")
+@router.get("/{user_id}", response_model=UserProfileResponse)
 async def get_user(
     user_id: str,
     session_id: UUID | None = Header(default=None, alias="session-id"),
@@ -169,11 +169,22 @@ async def get_user(
     return UserProfileResponse(**data)
 
 
-@authz_router.post("/user/{uid}/follow")
+@router.get("/{uid}/followers", response_model=list[Follower])
+async def get_user_followers(uid: str) -> list[Follower]:
+    """Get the specified user's followers."""
+    followers = await Follower.prisma().find_many(where={"follows_id": uid})
+    return followers
+
+
+@router.post("/{uid}/follow", response_model=Follower)
 async def follow_user(
-    uid: str, user_id: UUID = Header(default=None), session_id: UUID = Header(alias="session-id")
+    uid: str,
+    user_id: UUID | None = Header(default=None),
+    session_id: UUID | None = Header(alias="session-id"),
+    sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> Follower:
     """Add the currently logged in user as a follower to user <uid>."""
+    await is_authorized(user_id, session_id, sessions)  # raises error if unauthorized
     try:
         follow_record = await Follower.prisma().create(
             data={
@@ -188,11 +199,15 @@ async def follow_user(
     return follow_record
 
 
-@authz_router.post("/user/{uid}/unfollow")
+@router.post("/{uid}/unfollow", response_model=Follower)
 async def unfollow_user(
-    uid: str, user_id: UUID = Header(default=None), session_id: UUID = Header(alias="session-id")
+    uid: str,
+    user_id: UUID | None = Header(default=None),
+    session_id: UUID | None = Header(alias="session-id"),
+    sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> Follower:
     """Make the currently logged in user unfollow user <uid>."""
+    await is_authorized(user_id, session_id, sessions)
     try:
         deleted_record = await Follower.prisma().delete(
             where={"user_id_follows_id": {"follows_id": uid, "user_id": str(user_id)}}
