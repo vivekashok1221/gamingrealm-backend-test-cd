@@ -1,7 +1,8 @@
+import logging
+from typing import TypeVar
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException
-from fastapi.responses import JSONResponse
 from passlib.hash import argon2
 from prisma.models import User
 from prisma.partials import UserProfile
@@ -12,6 +13,8 @@ from src.backend.models import UserInLogin, UserInSignup
 
 router = APIRouter(prefix="/user")
 COOKIE_MAX_AGE = 30 * 24 * 60 * 60  # 2592000 seconds (30 days)
+
+T = TypeVar("T", UUID, UserProfile, str)
 
 
 async def hash_password(password: str) -> str:
@@ -26,21 +29,20 @@ async def check_password(password: str, hash_: str) -> bool:
 
 async def set_session(
     user_profile: UserProfile, sessions: AbstractSessionStorage, message: str
-) -> dict:
+) -> dict[str, T]:
     """Creates session and sets cookie."""
-    session = await sessions.create_session(user_profile.id)
-    return {"session_id": session.id, "user": user_profile.dict(), "message": message}
+    session = await sessions.create_session(UUID(user_profile.id))
+    return {"session_id": session.id, "user": user_profile, "message": message}
 
 
 @router.post("/signup")
 async def signup(
     user_login: UserInSignup = Body(),
-    session_id: UUID | None = Header(default=None),
     sessions: AbstractSessionStorage = Depends(get_sessions),
-) -> JSONResponse:
+) -> dict[str, T]:
     """Endpoint to sign up a user.
 
-    Returns a username and session id if authentication is successful.
+    Returns session id and user details except password if authentication is successful.
     """
     username = user_login.username
     password = user_login.password
@@ -56,27 +58,33 @@ async def signup(
         data={"username": username, "email": email, "password": await hash_password(password)}
     )
     user_profile = UserProfile(**user.dict(exclude={"password"}))
-    response: dict = await set_session(user_profile, sessions, message="Account created.")
+    response: dict[str, T] = await set_session(user_profile, sessions, message="Account created.")
     return response
 
 
 @router.post("/login")
 async def login(
-    user: UserInLogin,
+    user_login: UserInLogin,
     session_id: UUID | None = Header(default=None),
     sessions: AbstractSessionStorage = Depends(get_sessions),
-) -> JSONResponse:
+) -> dict[str, T]:
     """Endpoint to authenticate a user. Validation is done on form data before querying DB.
 
-    Returns a cookie with session id if authentication is successful.
+    Returns session id and user details except password if authentication is successful.
     """
-    username = user.username
-    password = user.password
+    if session_id is not None and session_id in sessions:
+        await sessions.delete_session(session_id)
+        logging.warning("Session {session_id} has been deleted since it already exists.")
 
-    user: User = await User.prisma().find_first(where={"username": username})
+    username = user_login.username
+    password = user_login.password
+
+    user: User | None = await User.prisma().find_first(where={"username": username})
 
     if user is None or (not await check_password(password, user.password)):
         raise HTTPException(status_code=404, detail="The username or password is incorrect.")
     user_profile = UserProfile(**user.dict(exclude={"password"}))
-    response = await set_session(user_profile, sessions, message="Successfully logged in.")
+    response: dict[str, T] = await set_session(
+        user_profile, sessions, message="Successfully logged in."
+    )
     return response
