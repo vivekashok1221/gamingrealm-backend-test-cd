@@ -1,7 +1,8 @@
 import re
 
-from prisma.partials import UserInLogin_
 from pydantic import EmailStr, validator
+
+from prisma.partials import UserInLogin_
 
 USERNAME_RE = re.compile("^[A-Za-z0-9_-]*$")
 

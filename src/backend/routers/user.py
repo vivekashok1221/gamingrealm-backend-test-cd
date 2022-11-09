@@ -4,14 +4,16 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from loguru import logger
 from passlib.hash import argon2
+from starlette.responses import JSONResponse
 
 from prisma.models import User
 from prisma.partials import UserProfile
 from src.backend.auth.sessions import AbstractSessionStorage
-from src.backend.dependencies import get_sessions
+from src.backend.dependencies import get_sessions, is_authorized
 from src.backend.models import UserInLogin, UserInSignup
 
 router = APIRouter(prefix="/user")
+authz_router = APIRouter(dependencies=[Depends(is_authorized)])
 COOKIE_MAX_AGE = 30 * 24 * 60 * 60  # 2592000 seconds (30 days)
 
 T = TypeVar("T", UUID, UserProfile, str)
@@ -34,7 +36,7 @@ async def set_session(
 ) -> dict[str, T]:
     """Creates session and sets cookie."""
     session = await sessions.create_session(UUID(user_profile.id))
-    return {"session_id": session.id, "user": user_profile, "message": message}
+    return {"session_id": session.id, "user": user_profile, "message": message}  # pyright: ignore
 
 
 @router.post("/signup")
@@ -101,3 +103,19 @@ async def login(
         f" for {user_profile.username}({user_profile.id})."
     )
     return response
+
+
+@authz_router.post("/logout")
+async def logout(
+    user_id: UUID = Header(default=None),
+    session_id: UUID = Header(default=None),
+    sessions: AbstractSessionStorage = Depends(get_sessions),
+) -> JSONResponse:
+    """Endpoint to log out a user. The header must include session-id.
+
+    Session is deleted from session storage. Client has to delete session cookie.
+    """
+    if is_authorized(user_id, session_id, sessions):
+        await sessions.delete_session(session_id)
+
+    return JSONResponse(status_code=200, content=f"Session {session_id} deleted.")

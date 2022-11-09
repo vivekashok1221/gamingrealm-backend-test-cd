@@ -1,8 +1,34 @@
-from src.backend.auth.sessions import AbstractSessionStorage, InMemorySessionStorage
+from typing import Literal
+from uuid import UUID
 
-sessions = InMemorySessionStorage()
+from fastapi import Depends, Header, HTTPException
+from loguru import logger
+
+from src.backend.auth.sessions import AbstractSessionStorage, InMemorySessionStorage, Session
+
+_sessions = InMemorySessionStorage()
 
 
 async def get_sessions() -> AbstractSessionStorage:
-    """Returns session storage objects."""
-    return sessions
+    """Returns session storage object."""
+    return _sessions
+
+
+async def is_authorized(
+    user_id: UUID | None = Header(default=None, alias="user-id"),
+    session_id: UUID | None = Header(default=None, alias="session-id"),
+    sessions: AbstractSessionStorage = Depends(get_sessions),
+) -> Literal[True]:
+    """The headers must include user-id and session-id."""
+    logger.trace(f"Attempting authorization with session id: {session_id} and user id: {user_id}")
+    if None in (session_id, user_id):
+        raise HTTPException(status_code=400, detail="Missing required headers.")
+
+    session: Session | None = sessions.get_session(session_id)  # pyright: ignore
+    if session is None:
+        raise HTTPException(status_code=440, detail="Invalid session id or session has expired.")
+
+    if user_id != session.user_id:
+        raise HTTPException(status_code=403, detail="Not Authorized.")
+
+    return True
