@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from prisma import Prisma
 
-from src.backend.auth import authentication
+from prisma import Prisma
+from src.backend.routers import authentication
 
 app = FastAPI(title="GamingRealm")
 db = Prisma(auto_register=True)
