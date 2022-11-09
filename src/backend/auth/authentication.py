@@ -1,8 +1,8 @@
-import logging
 from typing import TypeVar
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException
+from loguru import logger
 from passlib.hash import argon2
 from prisma.models import User
 from prisma.partials import UserProfile
@@ -19,11 +19,13 @@ T = TypeVar("T", UUID, UserProfile, str)
 
 async def hash_password(password: str) -> str:
     """Returns hash of the password."""
+    logger.trace("Creating password hash.")
     return argon2.using(rounds=4).hash(password)
 
 
 async def check_password(password: str, hash_: str) -> bool:
     """Compares salted-hash against hash of user-inputted password."""
+    logger.trace("Checking if the password hashes match.")
     return argon2.verify(password, hash_)
 
 
@@ -52,6 +54,7 @@ async def signup(
         where={"OR": [{"username": username}, {"email": email}]}
     )
     if user is not None:
+        logger.debug("Sign up attempted with username or email which already exists.")
         raise HTTPException(status_code=409, detail="The username or email already exists")
 
     user = await User.prisma().create(
@@ -59,23 +62,24 @@ async def signup(
     )
     user_profile = UserProfile(**user.dict(exclude={"password"}))
     response: dict[str, T] = await set_session(user_profile, sessions, message="Account created.")
+
+    logger.info(
+        f"Account {user_profile.username}({user_profile.id}) successfully created."
+        f"\nSession {response['session_id']} successfully created"
+    )
     return response
 
 
 @router.post("/login")
 async def login(
     user_login: UserInLogin,
-    session_id: UUID | None = Header(default=None),
+    session_id: UUID | None = Header(default=None, alias="session-id"),
     sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> dict[str, T]:
     """Endpoint to authenticate a user. Validation is done on form data before querying DB.
 
     Returns session id and user details except password if authentication is successful.
     """
-    if session_id is not None and session_id in sessions:
-        await sessions.delete_session(session_id)
-        logging.warning("Session {session_id} has been deleted since it already exists.")
-
     username = user_login.username
     password = user_login.password
 
@@ -86,5 +90,14 @@ async def login(
     user_profile = UserProfile(**user.dict(exclude={"password"}))
     response: dict[str, T] = await set_session(
         user_profile, sessions, message="Successfully logged in."
+    )
+
+    if session_id is not None and session_id in sessions:  # Checking for duplicate session.
+        await sessions.delete_session(session_id)
+        logger.warning(f"Deleted session {session_id} since a new session has been created.")
+
+    logger.info(
+        f"Session {response['session_id']} successfully created"
+        f" for {user_profile.username}({user_profile.id})."
     )
     return response
