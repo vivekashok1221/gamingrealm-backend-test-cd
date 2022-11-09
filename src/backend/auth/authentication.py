@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Body, Depends, HTTPException
+from uuid import UUID
+
+from fastapi import APIRouter, Body, Cookie, Depends, Header, HTTPException
 from fastapi.responses import JSONResponse
 from passlib.hash import argon2
 from prisma.models import User
+from prisma.partials import UserProfile
 
 from src.backend.auth.sessions import AbstractSessionStorage
 from src.backend.dependencies import get_sessions
@@ -21,15 +24,18 @@ async def check_password(password: str, hash_: str) -> bool:
     return argon2.verify(password, hash_)
 
 
-async def set_session(user: User, sessions: AbstractSessionStorage, message: str) -> JSONResponse:
+async def set_session(
+    user_profile: UserProfile, sessions: AbstractSessionStorage, message: str
+) -> dict:
     """Creates session and sets cookie."""
-    session = await sessions.create_session(user.id)
-    return {"session_id": session.id, "username": user.username, "message": message}
+    session = await sessions.create_session(user_profile.id)
+    return {"session_id": session.id, "user": user_profile.dict(), "message": message}
 
 
 @router.post("/signup")
 async def signup(
     user_login: UserInSignup = Body(),
+    session_id: UUID = Cookie(),
     sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> JSONResponse:
     """Endpoint to sign up a user.
@@ -49,13 +55,15 @@ async def signup(
     user = await User.prisma().create(
         data={"username": username, "email": email, "password": await hash_password(password)}
     )
-    response: JSONResponse = await set_session(user, sessions, message="Account created.")
+    user_profile = UserProfile(user.dict(exclude={"password"}))
+    response: dict = await set_session(user_profile, sessions, message="Account created.")
     return response
 
 
 @router.post("/login")
 async def login(
     user: UserInLogin,
+    session_id: UUID | None = Header(default=None),
     sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> JSONResponse:
     """Endpoint to authenticate a user. Validation is done on form data before querying DB.
@@ -69,6 +77,6 @@ async def login(
 
     if user is None or (not await check_password(password, user.password)):
         raise HTTPException(status_code=404, detail="The username or password is incorrect.")
-
-    response = await set_session(user, sessions, message="Successfully logged in.")
+    user_profile = UserProfile(user.dict(exclude={"password"}))
+    response = await set_session(user_profile, sessions, message="Successfully logged in.")
     return response
