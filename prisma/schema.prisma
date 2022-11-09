@@ -5,7 +5,7 @@ datasource db {
 
 generator client {
   provider             = "prisma-client-py"
-  partial_type_generator = "src/prisma_partial_types.py"
+  partial_type_generator = "prisma/prisma_partial_types.py"
   recursive_type_depth = 5
 }
 

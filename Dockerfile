@@ -11,11 +11,11 @@ COPY ./pyproject.toml ./poetry.lock* ./
 
 RUN poetry install --no-root --without dev
 
-RUN mkdir ./src/
+RUN mkdir ./prisma/
 
-COPY ./schema.prisma  ./
+COPY prisma/schema.prisma  ./
 
-COPY ./src/prisma_partial_types.py ./src/
+COPY prisma/prisma_partial_types.py ./prisma/
 
 RUN poetry run prisma generate
 
