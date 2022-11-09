@@ -11,11 +11,14 @@ COPY ./pyproject.toml ./poetry.lock* ./
 
 RUN poetry install --no-root --without dev
 
-COPY ./schema.prisma .
+RUN mkdir ./prisma/
+
+COPY prisma/schema.prisma  ./
+
+COPY prisma/prisma_partial_types.py ./prisma/
 
 RUN poetry run prisma generate
 
 COPY . .
 
-ENTRYPOINT ["poetry", "run", "uvicorn", "src.backend.app:app", "--host", "0.0.0.0"]
-CMD ["--reload", "--reload-dir", "/GR-backend/src"]
+ENTRYPOINT ["./scripts/entrypoint.sh"]

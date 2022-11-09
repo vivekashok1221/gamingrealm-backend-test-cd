@@ -5,7 +5,7 @@ datasource db {
 
 generator client {
   provider             = "prisma-client-py"
-  partial_type_generator = "src/prisma_partial_types.py"
+  partial_type_generator = "prisma/prisma_partial_types.py"
   recursive_type_depth = 5
 }
 
@@ -14,7 +14,6 @@ model User {
   email      String
   username   String   @db.VarChar(20)
   password   String
-  salt       String
   created_at DateTime @default(now())
 
   posts        Post[]

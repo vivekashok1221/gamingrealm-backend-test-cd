@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 class Session:
     """A user session.
 
-    Whenever a user logs in succesfully, a Session object
+    Whenever a user logs in successfully, a Session object
     is created and stored in a session storage backend.
     """
 

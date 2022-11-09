@@ -16,6 +16,12 @@ class AbstractSessionStorage(metaclass=ABCMeta):
     """
 
     @abstractmethod
+    def __contains__(self, id: UUID) -> bool:
+        """Checks if the session id exists in the session storage."""
+
+    ...
+
+    @abstractmethod
     async def get_session(self, id: UUID) -> Session | None:
         """Gets a session from the storage. Returns None if the session doesn't exist.
 
@@ -53,6 +59,9 @@ class AbstractSessionStorage(metaclass=ABCMeta):
 class InMemorySessionStorage(AbstractSessionStorage):  # noqa: D101
     def __init__(self) -> None:
         self._sessions = dict[UUID, Session]()
+
+    def __contains__(self, id: UUID):
+        return self._sessions.get(id) is not None
 
     async def get_session(self, id: UUID) -> Session | None:  # noqa: D102
         return self._sessions.get(id)
