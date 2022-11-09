@@ -6,11 +6,13 @@ from loguru import logger
 from passlib.hash import argon2
 from starlette.responses import JSONResponse
 
-from prisma.models import User
+from prisma.errors import PrismaError
+from prisma.models import Follower, Post, User
 from prisma.partials import UserProfile
 from src.backend.auth.sessions import AbstractSessionStorage
 from src.backend.dependencies import get_sessions, is_authorized
-from src.backend.models import UserInLogin, UserInSignup
+from src.backend.models import UserInLogin, UserInSignup, UserProfileResponse
+from src.backend.paginate_db import paginate
 
 router = APIRouter(prefix="/user")
 authz_router = APIRouter(dependencies=[Depends(is_authorized)])
@@ -119,3 +121,84 @@ async def logout(
         await sessions.delete_session(session_id)
 
     return JSONResponse(status_code=200, content=f"Session {session_id} deleted.")
+
+
+@router.get("/{user_id}")
+async def get_user(
+    user_id: str,
+    session_id: UUID | None = Header(default=None, alias="session-id"),
+    sessions: AbstractSessionStorage = Depends(get_sessions),
+) -> UserProfileResponse:
+    """Endpoint to get a user's data.
+
+    Returns user profile data (including number of followers, following, posts).
+    """
+    user = await User.prisma().find_first(where={"id": user_id})
+    if not user:
+        logger.debug(f"User {user_id} not found")
+        raise HTTPException(status_code=404, detail="User not found.")
+    followers = await Follower.prisma().count(where={"follows_id": user_id})
+    following = await Follower.prisma().count(where={"user_id": user_id})
+    posts = await paginate(Post, page_size=10)
+    if session_id:
+        current_user = await sessions.get_session(session_id)
+        if not current_user:
+            raise HTTPException(401, "Invalid session ID sent.")
+        is_following = await Follower.prisma().find_first(
+            where={"user_id": str(current_user.user_id), "follows_id": user.id}
+        )
+    else:
+        is_following = None
+    data = {
+        **user.dict(
+            exclude={
+                "posts",
+                "post_ratings",
+                "comments",
+                "reports",
+                "follows",
+                "password",
+                "followers",
+            }
+        ),
+        "follower_count": followers,
+        "following_count": following,
+        "posts": posts,
+        "is_following": is_following,
+    }
+    return UserProfileResponse(**data)
+
+
+@authz_router.post("/user/{uid}/follow")
+async def follow_user(
+    uid: str, user_id: UUID = Header(default=None), session_id: UUID = Header(alias="session-id")
+) -> Follower:
+    """Add the currently logged in user as a follower to user <uid>."""
+    try:
+        follow_record = await Follower.prisma().create(
+            data={
+                "user_id": str(user_id),
+                "follows_id": uid,
+                "follows": {"connect": {"id": uid}},
+                "user": {"connect": {"id": str(user_id)}},
+            }
+        )
+    except PrismaError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return follow_record
+
+
+@authz_router.post("/user/{uid}/unfollow")
+async def unfollow_user(
+    uid: str, user_id: UUID = Header(default=None), session_id: UUID = Header(alias="session-id")
+) -> Follower:
+    """Make the currently logged in user unfollow user <uid>."""
+    try:
+        deleted_record = await Follower.prisma().delete(
+            where={"user_id_follows_id": {"follows_id": uid, "user_id": str(user_id)}}
+        )
+    except PrismaError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    if not deleted_record:
+        raise HTTPException(status_code=422, detail=f"User {user_id} wasn't following {uid}")
+    return deleted_record

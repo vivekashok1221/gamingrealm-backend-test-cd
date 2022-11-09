@@ -21,10 +21,10 @@ async def is_authorized(
 ) -> Literal[True]:
     """The headers must include user-id and session-id."""
     logger.trace(f"Attempting authorization with session id: {session_id} and user id: {user_id}")
-    if None in (session_id, user_id):
+    if session_id is None or user_id is None:  # better type-narrowing than None in (session, user)
         raise HTTPException(status_code=400, detail="Missing required headers.")
 
-    session: Session | None = sessions.get_session(session_id)  # pyright: ignore
+    session: Session | None = await sessions.get_session(session_id)
     if session is None:
         raise HTTPException(status_code=440, detail="Invalid session id or session has expired.")
 

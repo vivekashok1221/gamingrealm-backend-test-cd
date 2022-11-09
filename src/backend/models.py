@@ -1,8 +1,11 @@
 import re
+from datetime import datetime
 
-from pydantic import EmailStr, validator
+from pydantic import BaseModel, EmailStr, validator
 
+from prisma.models import Post
 from prisma.partials import UserInLogin_
+from src.backend.paginate_db import Page
 
 USERNAME_RE = re.compile("^[A-Za-z0-9_-]*$")
 
@@ -31,3 +34,16 @@ class UserInSignup(UserInLogin):
     """Model representing user at signup."""
 
     email: EmailStr
+
+
+class UserProfileResponse(BaseModel):
+    """Data returned by the /user/{id} endpoint."""
+
+    id: str
+    username: str
+    email: str
+    created_at: datetime
+    following_count: int
+    follower_count: int
+    posts: Page[Post]
+    is_following: bool | None
