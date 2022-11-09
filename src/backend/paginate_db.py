@@ -4,9 +4,9 @@ from typing import Generic, Type, TypeVar
 from loguru import logger
 from pydantic.generics import GenericModel
 
-from prisma.models import Post, User
+from prisma.models import Post, PostComment, User
 
-_ModelT = TypeVar("_ModelT", User, Post)
+_ModelT = TypeVar("_ModelT", User, Post, PostComment)
 
 
 class Page(GenericModel, Generic[_ModelT]):

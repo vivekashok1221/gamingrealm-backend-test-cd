@@ -1,9 +1,9 @@
 import re
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import AnyHttpUrl, BaseModel, EmailStr, validator
 
-from prisma.models import Post
+from prisma.models import Post, PostComment
 from prisma.partials import UserInLogin_
 from src.backend.paginate_db import Page
 
@@ -47,3 +47,22 @@ class UserProfileResponse(BaseModel):
     follower_count: int
     posts: Page[Post]
     is_following: bool | None
+
+
+class PostDetails(BaseModel):
+    """Data returned for a specific post.
+
+    The comments are paginated, and the first page of comments are included with the first response.
+    """
+
+    post: Post
+    comments: Page[PostComment]
+
+
+class PostCreateBody(BaseModel):
+    """Describes the fields needed to create a new post."""
+
+    title: str
+    text_content: str
+    media: list[AnyHttpUrl]
+    tags: list[str]  # tag NAMES, not ids
