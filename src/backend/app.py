@@ -10,7 +10,7 @@ app.include_router(authentication.router)
 
 @app.on_event("startup")
 async def connect_db() -> None:
-    """Creates a connection when the server starts."""
+    """Connects to the prisma query engine before app starts."""
     await db.connect()
 
 
