@@ -179,7 +179,7 @@ async def delete_comment(
 
 
 def _remove_pw_from_post_author(p):  # noqa: ANN001, ANN202
-    p.author = UserProfile(p.author.dict())  # type: ignore
+    p.author = UserProfile(**p.author.dict())  # type: ignore
     return p
 
 
