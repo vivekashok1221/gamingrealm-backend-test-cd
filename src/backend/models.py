@@ -1,7 +1,11 @@
 import re
+from datetime import datetime
 
+from pydantic import AnyHttpUrl, BaseModel, EmailStr, validator
+
+from prisma.models import Post, PostComment
 from prisma.partials import UserInLogin_
-from pydantic import EmailStr, validator
+from src.backend.paginate_db import Page
 
 USERNAME_RE = re.compile("^[A-Za-z0-9_-]*$")
 
@@ -30,3 +34,35 @@ class UserInSignup(UserInLogin):
     """Model representing user at signup."""
 
     email: EmailStr
+
+
+class UserProfileResponse(BaseModel):
+    """Data returned by the /user/{id} endpoint."""
+
+    id: str
+    username: str
+    email: str
+    created_at: datetime
+    following_count: int
+    follower_count: int
+    posts: Page[Post]
+    is_following: bool | None
+
+
+class PostDetails(BaseModel):
+    """Data returned for a specific post.
+
+    The comments are paginated, and the first page of comments are included with the first response.
+    """
+
+    post: Post
+    comments: Page[PostComment]
+
+
+class PostCreateBody(BaseModel):
+    """Describes the fields needed to create a new post."""
+
+    title: str
+    text_content: str
+    media: list[AnyHttpUrl]
+    tags: list[str]  # tag NAMES, not ids
