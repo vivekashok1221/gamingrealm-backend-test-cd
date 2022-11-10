@@ -150,4 +150,8 @@ if __name__ == "__main__":
     parser.add_argument("--users", type=int, default=10, help="Number of users to create")
     parser.add_argument("--posts", type=int, default=30, help="Number of posts to create")
     args = parser.parse_args()
+    if (args.posts // 2) > args.user:
+        logger.warning(f"User count {args.users} less than half of post count {args.posts // 2}")
+        logger.warning(f"Setting user count to {args.posts // 2}")
+        args.users = args.posts // 2
     asyncio.run(_main(args.users, args.posts))
