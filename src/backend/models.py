@@ -45,6 +45,7 @@ class UserProfileResponse(BaseModel):
     created_at: datetime
     following_count: int
     follower_count: int
+    posts_count: int
     posts: Page[Post]
     is_following: bool | None
 

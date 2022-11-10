@@ -137,12 +137,16 @@ async def get_user(
     followers = await Follower.prisma().count(where={"follows_id": user_id})
     following = await Follower.prisma().count(where={"user_id": user_id})
     posts = await paginate(Post, page_size=10)
+    posts_count = await Post.prisma().count(where={"author_id": user_id})
     if session_id:
         current_user = await sessions.get_session(session_id)
         if not current_user:
             raise HTTPException(401, "Invalid session ID sent.")
-        is_following = await Follower.prisma().find_first(
-            where={"user_id": str(current_user.user_id), "follows_id": user.id}
+        is_following = (
+            await Follower.prisma().find_first(
+                where={"user_id": str(current_user.user_id), "follows_id": user.id}
+            )
+            is not None
         )
     else:
         is_following = None
@@ -162,6 +166,7 @@ async def get_user(
         "following_count": following,
         "posts": posts,
         "is_following": is_following,
+        "posts_count": posts_count,
     }
     return UserProfileResponse(**data)
 
