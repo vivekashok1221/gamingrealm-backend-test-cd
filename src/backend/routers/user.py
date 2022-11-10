@@ -109,7 +109,6 @@ async def login(
 
 @authz_router.post("/logout")
 async def logout(
-    user_id: UUID = Header(default=None),
     session_id: UUID = Header(default=None),
     sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> JSONResponse:
@@ -117,9 +116,7 @@ async def logout(
 
     Session is deleted from session storage. Client has to delete session cookie.
     """
-    if is_authorized(user_id, session_id, sessions):
-        await sessions.delete_session(session_id)
-
+    await sessions.delete_session(session_id)
     return JSONResponse(status_code=200, content=f"Session {session_id} deleted.")
 
 
@@ -176,15 +173,12 @@ async def get_user_followers(uid: str) -> list[Follower]:
     return followers
 
 
-@router.post("/{uid}/follow", response_model=Follower)
+@authz_router.post("/{uid}/follow", response_model=Follower)
 async def follow_user(
     uid: str,
     user_id: UUID | None = Header(default=None),
-    session_id: UUID | None = Header(alias="session-id"),
-    sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> Follower:
     """Add the currently logged in user as a follower to user <uid>."""
-    await is_authorized(user_id, session_id, sessions)  # raises error if unauthorized
     try:
         follow_record = await Follower.prisma().create(
             data={
@@ -199,15 +193,12 @@ async def follow_user(
     return follow_record
 
 
-@router.post("/{uid}/unfollow", response_model=Follower)
+@authz_router.post("/{uid}/unfollow", response_model=Follower)
 async def unfollow_user(
     uid: str,
     user_id: UUID | None = Header(default=None),
-    session_id: UUID | None = Header(alias="session-id"),
-    sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> Follower:
     """Make the currently logged in user unfollow user <uid>."""
-    await is_authorized(user_id, session_id, sessions)
     try:
         deleted_record = await Follower.prisma().delete(
             where={"user_id_follows_id": {"follows_id": uid, "user_id": str(user_id)}}

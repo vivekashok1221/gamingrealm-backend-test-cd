@@ -12,14 +12,15 @@ from src.backend.models import PostCreateBody, PostDetails
 from src.backend.paginate_db import Page, paginate
 
 router = APIRouter(prefix="/post")
+authz_router = APIRouter(dependencies=[Depends(is_authorized)])
 
 
 @router.get("/")
 async def get_posts(
     take: int = Header(default=10),
+    cursor: str | None = Header(default=None),
     uid: str | None = Query(default=None),
     tag: str | None = Query(default=None),
-    cursor: str | None = Header(default=None),
 ) -> Page[Post]:
     """Paginate and get posts based on specified filters (user, tag etc).
 
@@ -50,15 +51,12 @@ async def get_post(id: str) -> PostDetails:
     return PostDetails(post=post, comments=comments)
 
 
-@router.post("/create", response_model=Post)
+@authz_router.post("/create", response_model=Post)
 async def create_post(
     post: PostCreateBody = Body(embed=True),
     user_id: UUID | None = Header(default=None),
-    session_id: UUID | None = Header(default=None, alias="session-id"),
-    sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> Post:
     """Create a new post."""
-    await is_authorized(user_id, session_id, sessions)
     try:
         inserted_post = await Post.prisma().create(
             data={
@@ -75,19 +73,18 @@ async def create_post(
     return inserted_post
 
 
-@router.delete("/{id}")
+@authz_router.delete("/{id}")
 async def delete_post(
     id: str,
     user_id: UUID | None = Header(default=None),
-    session_id: UUID | None = Header(default=None, alias="session-id"),
-    sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> JSONResponse:
     """Delete a post."""
-    await is_authorized(user_id, session_id, sessions)
     try:
         # this endpoint only soft-deletes
         #
-        deleted_post = await Post.prisma().update(data={"deleted": True}, where={"id": id})
+        deleted_post = await Post.prisma().update(
+            data={"deleted": True}, where={"id": id, "author_id": user_id}
+        )
     except PrismaError as e:
         logger.warning(f"Could not delete post: {e}")
         raise HTTPException(400, "Could not delete the post due to an internal error")
@@ -96,16 +93,13 @@ async def delete_post(
     return JSONResponse({"message": "Post deleted"}, status_code=200)
 
 
-@router.post("/{post_id}/comments", response_model=PostComment)
+@authz_router.post("/{post_id}/comments", response_model=PostComment)
 async def create_comment(
     post_id: str,
     comment_text: str = Body(),
     user_id: UUID | None = Header(default=None),
-    session_id: UUID | None = Header(default=None),
-    sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> PostComment:
     """Create a comment on the specified post."""
-    await is_authorized(user_id, session_id, sessions)
     try:
         comment = await PostComment.prisma().create(
             data={
@@ -137,7 +131,7 @@ async def get_comments(
     )
 
 
-@router.delete("/{post_id}/comments/{comment_id}")
+@authz_router.delete("/{post_id}/comments/{comment_id}")
 async def delete_comment(
     post_id: str,
     comment_id: str,
@@ -146,12 +140,13 @@ async def delete_comment(
     sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> JSONResponse:
     """Endpoint to delete a comment."""
-    await is_authorized(user_id, session_id, sessions)
     try:
         deleted_comment = await PostComment.prisma().delete(where={"id": comment_id})
     except PrismaError as e:
         logger.warning(f"Could not delete comment: {e}")
         raise HTTPException(400, "Could not delete the comment due to an internal error")
     if not deleted_comment:
-        return JSONResponse({"message": "Comment did not exist"}, status_code=400)
+        return JSONResponse(
+            {"message": "Comment did not exist under the given username"}, status_code=400
+        )
     return JSONResponse({"message": "Comment deleted"}, status_code=200)
