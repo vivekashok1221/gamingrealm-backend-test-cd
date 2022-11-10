@@ -130,7 +130,6 @@ async def get_user(
 
     Returns user profile data (including number of followers, following, posts).
     """
-    print(user_id)
     user = await User.prisma().find_first(where={"id": user_id})
     if not user:
         logger.debug(f"User {user_id} not found")
