@@ -1,5 +1,5 @@
 """Functions to paginate queries to the database."""
-from typing import Generic, Type, TypeVar
+from typing import Callable, Generic, Type, TypeVar
 
 from loguru import logger
 from pydantic.generics import GenericModel
@@ -21,14 +21,31 @@ class Page(GenericModel, Generic[_ModelT]):
 
 
 async def paginate(
-    model: Type[_ModelT], page_size: int, cursor_id: str | None = None, **kwargs
+    model: Type[_ModelT],
+    page_size: int,
+    cursor_id: str | None = None,
+    f: Callable[[_ModelT], _ModelT] | None = None,
+    **kwargs,
 ) -> Page[_ModelT]:
-    """Make a paginated database query."""
+    """Make a paginated database query.
+
+    Args:
+        model: The model to query with
+        page_size: The number of elements to return per page
+        cursor_id: ID for an object to be used as a cursor
+        f: A function to be applied to every object that was returned by the query
+           This can be used to modify and filter the resultset.
+        **kwargs: Keyword arguments to pass to Model.prisma().find_many
+    Returns:
+        Page
+    """
     if cursor_id:
         logger.info(f"Making page query: {model}, page size={page_size}")
         data = await model.prisma().find_many(take=page_size, cursor={"id": cursor_id}, **kwargs)
     else:
         data = await model.prisma().find_many(take=page_size, **kwargs)
+    if f:
+        data = list(map(f, data))  # type: ignore
     try:
         new_cursor_id = data[-1].id
     except IndexError:

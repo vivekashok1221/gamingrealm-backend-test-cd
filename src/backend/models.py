@@ -58,6 +58,7 @@ class PostDetails(BaseModel):
 
     post: Post
     comments: Page[PostComment]
+    avg_rating: int
 
 
 class PostCreateBody(BaseModel):

@@ -5,7 +5,8 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 
 from prisma.errors import PrismaError
-from prisma.models import Post, PostComment
+from prisma.models import Post, PostComment, PostRating
+from prisma.partials import UserProfile
 from src.backend.auth.sessions import AbstractSessionStorage
 from src.backend.dependencies import get_sessions, is_authorized
 from src.backend.models import PostCreateBody, PostDetails
@@ -34,8 +35,15 @@ async def get_posts(
     if tag:
         filters["tags"] = {"some": {"tag_name": tag}}
     filters["deleted"] = False
+
     return await paginate(
-        Post, take, cursor, where=filters, include={"tags": True}, order={"created_at": "desc"}
+        Post,
+        take,
+        cursor,
+        f=_remove_pw_from_post_author,
+        where=filters,
+        include={"tags": True, "author": True},
+        order={"created_at": "desc"},
     )
 
 
@@ -70,9 +78,18 @@ async def get_post(id: str) -> PostDetails:
     if not post:
         raise HTTPException(404, "Post not found")
     comments = await paginate(
-        PostComment, page_size=20, where={"post_id": id}, order={"created_at": "desc"}
+        PostComment,
+        page_size=20,
+        f=_remove_pw_from_post_author,
+        where={"post_id": id},
+        include={"author": True},
+        order={"created_at": "desc"},
     )
-    return PostDetails(post=post, comments=comments)
+    avg_rating_query = await PostRating.prisma().group_by(
+        by=["post_id"], avg={"value": True}, having={"post_id": id}
+    )
+    avg_rating = round(avg_rating_query[0]["_avg"]["value"])  # type: ignore
+    return PostDetails(post=post, comments=comments, avg_rating=avg_rating)
 
 
 @authz_router.delete("/{id}")
@@ -131,7 +148,12 @@ async def get_comments(
         cursor: The ID of the last fetched item
     """
     return await paginate(
-        PostComment, take, cursor, where={"post_id": post_id}, order={"created_at": "desc"}
+        PostComment,
+        take,
+        cursor,
+        f=_remove_pw_from_post_author,
+        where={"post_id": post_id},
+        order={"created_at": "desc"},
     )
 
 
@@ -154,6 +176,11 @@ async def delete_comment(
             {"message": "Comment did not exist under the given username"}, status_code=400
         )
     return JSONResponse({"message": "Comment deleted"}, status_code=200)
+
+
+def _remove_pw_from_post_author(p):  # noqa: ANN001, ANN202
+    p.author = UserProfile(p.author.dict())  # type: ignore
+    return p
 
 
 router.include_router(authz_router)
