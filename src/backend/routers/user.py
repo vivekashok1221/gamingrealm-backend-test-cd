@@ -184,6 +184,9 @@ async def follow_user(
     user_id: UUID | None = Header(default=None),
 ) -> Follower:
     """Add the currently logged in user as a follower to user <uid>."""
+    if uid == user_id:
+        raise HTTPException(status_code=422, detail="User cannot follow themself.")
+
     try:
         follow_record = await Follower.prisma().create(
             data={
@@ -204,6 +207,8 @@ async def unfollow_user(
     user_id: UUID | None = Header(default=None),
 ) -> Follower:
     """Make the currently logged in user unfollow user <uid>."""
+    if uid == user_id:
+        raise HTTPException(status_code=422, detail="User cannot unfollow themself.")
     try:
         deleted_record = await Follower.prisma().delete(
             where={"user_id_follows_id": {"follows_id": uid, "user_id": str(user_id)}}
