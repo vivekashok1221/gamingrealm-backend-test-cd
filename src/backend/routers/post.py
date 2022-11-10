@@ -32,9 +32,11 @@ async def get_posts(
     if uid:
         filters["author_id"] = uid
     if tag:
-        filters["tag"] = {"tag_name": tag}
+        filters["tags"] = {"some": {"tag_name": tag}}
     filters["deleted"] = False
-    return await paginate(Post, take, cursor, where=filters, order={"created_at": "desc"})
+    return await paginate(
+        Post, take, cursor, where=filters, include={"tags": True}, order={"created_at": "desc"}
+    )
 
 
 @authz_router.post("/create", response_model=Post)
