@@ -2,13 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from prisma import Prisma
-from src.backend.routers import post, user
+from src.backend.routers import post, user,tags
 
 app = FastAPI(title="GamingRealm")
 db = Prisma(auto_register=True)
 app.include_router(user.router)
 app.include_router(post.router)
-
+app.include_router(tags.router)
 
 # Allow all origins, all headers except Authorization and all request methods
 app.add_middleware(
