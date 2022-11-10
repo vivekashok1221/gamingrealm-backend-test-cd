@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 
 from prisma import Prisma
-from src.backend.routers import user
+from src.backend.routers import post, user
 
 app = FastAPI(title="GamingRealm")
 db = Prisma(auto_register=True)
 app.include_router(user.router)
+app.include_router(post.router)
 
 
 @app.on_event("startup")

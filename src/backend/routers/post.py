@@ -37,20 +37,6 @@ async def get_posts(
     return await paginate(Post, take, cursor, where=filters, order={"created_at": "desc"})
 
 
-@router.get("/{id}", response_model=PostDetails)
-async def get_post(id: str) -> PostDetails:
-    """Get full details of a specific post."""
-    post = await Post.prisma().find_first(
-        where={"id": id, "deleted": False}, include={"tags": True, "media": True, "author": True}
-    )
-    if not post:
-        raise HTTPException(404, "Post not found")
-    comments = await paginate(
-        PostComment, page_size=20, where={"post_id": id}, order={"created_at": "desc"}
-    )
-    return PostDetails(post=post, comments=comments)
-
-
 @authz_router.post("/create", response_model=Post)
 async def create_post(
     post: PostCreateBody = Body(embed=True),
@@ -73,6 +59,20 @@ async def create_post(
     return inserted_post
 
 
+@router.get("/{id}", response_model=PostDetails)
+async def get_post(id: str) -> PostDetails:
+    """Get full details of a specific post."""
+    post = await Post.prisma().find_first(
+        where={"id": id, "deleted": False}, include={"tags": True, "media": True, "author": True}
+    )
+    if not post:
+        raise HTTPException(404, "Post not found")
+    comments = await paginate(
+        PostComment, page_size=20, where={"post_id": id}, order={"created_at": "desc"}
+    )
+    return PostDetails(post=post, comments=comments)
+
+
 @authz_router.delete("/{id}")
 async def delete_post(
     id: str,
@@ -81,9 +81,11 @@ async def delete_post(
     """Delete a post."""
     try:
         # this endpoint only soft-deletes
-        #
-        deleted_post = await Post.prisma().update(
-            data={"deleted": True}, where={"id": id, "author_id": user_id}
+        # update_many is used as update forces you to query with only fields that can
+        # uniquely identify a row
+        # and we need to filter by author_id as well
+        deleted_post = await Post.prisma().update_many(
+            data={"deleted": True}, where={"id": id, "author_id": str(user_id)}
         )
     except PrismaError as e:
         logger.warning(f"Could not delete post: {e}")
@@ -150,3 +152,6 @@ async def delete_comment(
             {"message": "Comment did not exist under the given username"}, status_code=400
         )
     return JSONResponse({"message": "Comment deleted"}, status_code=200)
+
+
+router.include_router(authz_router)
