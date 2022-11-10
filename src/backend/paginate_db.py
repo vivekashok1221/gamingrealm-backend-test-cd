@@ -30,7 +30,11 @@ async def paginate(
     else:
         data = await model.prisma().find_many(take=page_size, **kwargs)
     try:
-        cursor_id = data[-1].id
+        new_cursor_id = data[-1].id
     except IndexError:
-        cursor_id = None
-    return Page(data=data, count=len(data), cursor_id=cursor_id)  # type: ignore
+        new_cursor_id = None
+    if cursor_id == new_cursor_id:
+        # the query is just returning the last record over and over now
+        # return an empty set
+        return Page(data=[], count=0, cursor_id=None)
+    return Page(data=data, count=len(data), cursor_id=new_cursor_id)  # type: ignore

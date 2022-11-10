@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from prisma import Prisma
-from src.backend.routers import post, user,tags
+from src.backend.routers import post, tags, user
 
 app = FastAPI(title="GamingRealm")
 db = Prisma(auto_register=True)
