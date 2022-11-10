@@ -167,7 +167,9 @@ async def delete_comment(
 ) -> JSONResponse:
     """Endpoint to delete a comment."""
     try:
-        deleted_comment = await PostComment.prisma().delete(where={"id": comment_id})
+        deleted_comment = await PostComment.prisma().delete_many(
+            where={"id": comment_id, "author_id": str(user_id)}
+        )
     except PrismaError as e:
         logger.warning(f"Could not delete comment: {e}")
         raise HTTPException(400, "Could not delete the comment due to an internal error")
