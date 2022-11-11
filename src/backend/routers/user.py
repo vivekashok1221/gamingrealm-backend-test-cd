@@ -130,6 +130,7 @@ async def get_user(
 
     Returns user profile data (including number of followers, following, posts).
     """
+    print(user_id)
     user = await User.prisma().find_first(where={"id": user_id})
     if not user:
         logger.debug(f"User {user_id} not found")
@@ -184,6 +185,7 @@ async def follow_user(
     user_id: UUID | None = Header(default=None),
 ) -> Follower:
     """Add the currently logged in user as a follower to user <uid>."""
+    print(uid, user_id)
     if uid == user_id:
         raise HTTPException(status_code=422, detail="User cannot follow themself.")
 
@@ -198,6 +200,7 @@ async def follow_user(
         )
     except PrismaError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    print(follow_record)
     return follow_record
 
 
@@ -218,3 +221,6 @@ async def unfollow_user(
     if not deleted_record:
         raise HTTPException(status_code=422, detail=f"User {user_id} wasn't following {uid}")
     return deleted_record
+
+
+router.include_router(authz_router)

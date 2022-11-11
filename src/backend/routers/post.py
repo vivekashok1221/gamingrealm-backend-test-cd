@@ -69,8 +69,8 @@ async def create_post(
     return inserted_post
 
 
-@router.get("/{id}", response_model=PostDetails)
-async def get_post(id: str) -> PostDetails:
+@router.get("/{id}")
+async def get_post(id: str) -> dict:
     """Get full details of a specific post."""
     post = await Post.prisma().find_first(
         where={"id": id, "deleted": False}, include={"tags": True, "media": True, "author": True}
@@ -89,7 +89,7 @@ async def get_post(id: str) -> PostDetails:
         by=["post_id"], avg={"value": True}, having={"post_id": id}
     )
     avg_rating = round(avg_rating_query[0]["_avg"]["value"])  # type: ignore
-    return PostDetails(post=post, comments=comments, avg_rating=avg_rating)
+    return PostDetails(post=post, comments=comments, avg_rating=avg_rating).dict()
 
 
 @authz_router.delete("/{id}")
@@ -153,6 +153,7 @@ async def get_comments(
         cursor,
         f=_remove_pw_from_post_author,
         where={"post_id": post_id},
+        include={"author": True},
         order={"created_at": "desc"},
     )
 
