@@ -7,8 +7,7 @@ from loguru import logger
 from prisma.errors import PrismaError
 from prisma.models import Post, PostComment, PostRating
 from prisma.partials import UserProfile
-from src.backend.auth.sessions import AbstractSessionStorage
-from src.backend.dependencies import get_sessions, is_authorized
+from src.backend.dependencies import is_authorized
 from src.backend.models import PostCreateBody, PostDetails
 from src.backend.paginate_db import Page, paginate
 
@@ -160,11 +159,8 @@ async def get_comments(
 
 @authz_router.delete("/{post_id}/comments/{comment_id}")
 async def delete_comment(
-    post_id: str,
     comment_id: str,
     user_id: UUID | None = Header(default=None),
-    session_id: UUID | None = Header(default=None, alias="session-id"),
-    sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> JSONResponse:
     """Endpoint to delete a comment."""
     try:
