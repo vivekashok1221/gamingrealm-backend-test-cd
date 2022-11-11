@@ -7,8 +7,7 @@ from loguru import logger
 from prisma.errors import PrismaError
 from prisma.models import Post, PostComment, PostRating
 from prisma.partials import UserProfile
-from src.backend.auth.sessions import AbstractSessionStorage
-from src.backend.dependencies import get_sessions, is_authorized
+from src.backend.dependencies import is_authorized
 from src.backend.models import PostCreateBody, PostDetails
 from src.backend.paginate_db import Page, paginate
 
@@ -67,6 +66,24 @@ async def create_post(
         logger.warning(f"Could not create post: {e}")
         raise HTTPException(422, "Could not create the post due to an internal error")
     return inserted_post
+
+
+@router.get("/search")
+async def search_posts(
+    q: str = Query(),
+) -> Page[Post]:
+    """Gets posts based on specified query.
+
+    Matching is done using Full Text Search
+    """
+    words = q.split()
+    search_phrase = " & ".join(words)
+    query = (
+        'SELECT * from "Post" WHERE to_tsvector("title") @@ to_tsquery($1)'
+        ' ORDER BY "created_at" LIMIT 20'
+    )
+    posts = await Post.prisma().query_raw(query, search_phrase)
+    return Page(data=posts, count=len(posts), cursor_id=None)
 
 
 @router.get("/{id}", response_model=PostDetails)
@@ -159,11 +176,8 @@ async def get_comments(
 
 @authz_router.delete("/{post_id}/comments/{comment_id}")
 async def delete_comment(
-    post_id: str,
     comment_id: str,
     user_id: UUID | None = Header(default=None),
-    session_id: UUID | None = Header(default=None, alias="session-id"),
-    sessions: AbstractSessionStorage = Depends(get_sessions),
 ) -> JSONResponse:
     """Endpoint to delete a comment."""
     try:
