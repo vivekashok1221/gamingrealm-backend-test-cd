@@ -2,14 +2,14 @@
 name = "backend"
 version = "0.1.0"
 description = "Backend for Gaming Realm - a project built for Avishkar 2022"
-authors = ["Anand Krishna <anand2312@proton.me>", "Vivek Ashokkumar <vivekashok2112@gmail.com>", "Gautham Krishna Jayasurya <gautham.jayasurya@gmail.com>"]
+authors = ["Anand Krishna <anand2312@proton.me>", "Vivek Ashokkumar <vivekashok1221@gmail.com>", "Gautham Krishna Jayasurya <gautham.jayasurya@gmail.com>"]
 readme = "README.md"
 packages = [{include = "backend", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
-fastapi = "^0.85.1"
-prisma = "^0.7.0"
+python = "3.11.*"
+fastapi = "^0.96.0"
+prisma = "^0.8.0"
 loguru = "^0.6.0"
 uvicorn = {extras = ["fast"], version = "^0.19.0"}
 python-multipart = "^0.0.5"
