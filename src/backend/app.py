@@ -1,10 +1,25 @@
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from prisma import Prisma
 from src.backend.routers import post, tags, user
 
-app = FastAPI(title="GamingRealm")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator:
+    """Lifespan handler that runs on app startup and shutdown."""
+    # Connect to the prisma query engine before app starts.
+    await db.connect()
+
+    yield
+    # Clean up connections when the server shuts down.
+    await db.disconnect()
+
+
+app = FastAPI(title="GamingRealm", lifespan=lifespan)
 db = Prisma(auto_register=True)
 app.include_router(user.router)
 app.include_router(post.router)
@@ -17,18 +32,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-async def connect_db() -> None:
-    """Connects to the prisma query engine before app starts."""
-    await db.connect()
-
-
-@app.on_event("shutdown")
-async def disconnect_db() -> None:
-    """Clean up connections when the server shuts down."""
-    await db.disconnect()
 
 
 @app.get("/ping")
