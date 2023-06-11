@@ -1,15 +1,17 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 from loguru import logger
 
 from prisma.errors import PrismaError
-from prisma.models import Post, PostComment, PostRating
+from prisma.models import Post, PostComment, PostMedia, PostRating
 from prisma.partials import UserProfile
 from src.backend.dependencies import is_authorized
-from src.backend.models import PostCreateBody, PostDetails
+from src.backend.models import PostDetails
 from src.backend.paginate_db import Page, paginate
+from src.backend.storage import _upload_to_storage
 
 router = APIRouter(prefix="/post")
 authz_router = APIRouter(dependencies=[Depends(is_authorized)])
@@ -46,26 +48,36 @@ async def get_posts(
     )
 
 
-@authz_router.post("/create", response_model=Post)
+@authz_router.post("/create")
 async def create_post(
-    post: PostCreateBody = Body(embed=True),
+    title: Annotated[str, Form()],
+    text_content: Annotated[str, Form()] = None,
+    images: list[UploadFile] | None = None,
     user_id: UUID | None = Header(default=None),
-) -> Post:
+) -> JSONResponse:
     """Create a new post."""
     try:
         inserted_post = await Post.prisma().create(
             data={
-                "author_id": str(user_id),
-                "title": post.title,
-                "text_content": post.text_content,
-                "media": {"create": [{"object_url": url} for url in post.media]},
-                "tags": {"connect": [{"tag_name": tname} for tname in post.tags]},
-            }
+                "author": {"connect": {"id": str(user_id)}},
+                "title": title,
+                "text_content": text_content,
+            },
         )
     except PrismaError as e:
         logger.warning(f"Could not create post: {e}")
         raise HTTPException(422, "Could not create the post due to an internal error")
-    return inserted_post
+
+    response = inserted_post.dict(exclude={"media": True})
+    if images is not None:
+        file_path = f"{user_id}/{inserted_post.id}"
+        urls = await _upload_to_storage(images, file_path)
+
+        await PostMedia.prisma().create_many(
+            data=[{"post_id": inserted_post.id, "object_url": url} for url in urls]
+        )
+        response["urls"] = urls
+    return response
 
 
 @router.get("/{id}")
@@ -172,7 +184,7 @@ async def delete_comment(
         raise HTTPException(400, "Could not delete the comment due to an internal error")
     if not deleted_comment:
         return JSONResponse(
-            {"message": "Comment did not exist under the given username"}, status_code=400
+            {"message": "Comment does not exist under the given username"}, status_code=400
         )
     return JSONResponse({"message": "Comment deleted"}, status_code=200)
 

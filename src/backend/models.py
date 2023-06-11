@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 
-from pydantic import AnyHttpUrl, BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, validator
 
 from prisma.models import Post, PostComment
 from prisma.partials import UserInLogin_
@@ -59,12 +59,3 @@ class PostDetails(BaseModel):
     post: Post
     comments: Page[PostComment]
     avg_rating: int
-
-
-class PostCreateBody(BaseModel):
-    """Describes the fields needed to create a new post."""
-
-    title: str
-    text_content: str
-    media: list[AnyHttpUrl]
-    tags: list[str]  # tag NAMES, not ids
