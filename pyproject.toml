@@ -30,6 +30,8 @@ flake8-bugbear = "^22.10.27"
 flake8-docstrings = "^1.6.0"
 pyright = "^1.1.279"
 faker = "^15.3.1"
+pytest = "^7.3.2"
+asgi-lifespan = "^2.1.0"
 
 [tool.isort]
 profile = "black"
