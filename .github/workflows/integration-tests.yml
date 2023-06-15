@@ -1,0 +1,17 @@
+name: API Testing
+
+on: [pull_request, push, workflow_dispatch]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: isbang/compose-action@v1.4.1
+        with:
+          compose-file: "./test-compose.yml"
+          down-flags: "--volumes"
+          up-flags: "--abort-on-container-exit"
+          services: |
+            tests
+            test-postgres
