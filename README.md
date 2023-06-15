@@ -37,5 +37,16 @@ Run
 poetry run task runserver
 ```
 
+## Running tests
+Run
+```bash
+docker compose -f test-compose.yml up --abort-on-container-exit
+```
+When running the tests for the first time, if there is an error that says something like:
+```
+exec: "./scripts/migrate_and_test.sh": permission denied: unknown
+```
+locally run `chmod +x ./scripts/migrate_and_test.sh` and the re-run above command.
+
 ## Database Structure
 [ER Diagram](https://dbdiagram.io/embed/635aaaa96848d85eee878aea)

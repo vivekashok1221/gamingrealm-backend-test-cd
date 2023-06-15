@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
@@ -44,7 +45,7 @@ async def logged_in_user(
     client: AsyncClient, user1: User
 ) -> AsyncGenerator[tuple[User, str], None]:
     data = UserInLogin(username=user1.username, password="password12")
-    res = await client.post("/user/login", data=data.dict())
+    res = await client.post("/user/login", json=data.dict())
     response_data = res.json()
     yield user1, response_data["session_id"]
     await client.post("/user/logout", headers={"session-id": response_data["session_id"]})
@@ -56,7 +57,7 @@ async def test_new_user_sign_up(client: AsyncClient):
     data = UserInSignup(username="newusuer", password="i<3blockchain", email="foo@bar.com")
     # the email field in the UserInSignup is type hinted as EmailStr as it is a pydantic validator
     # so passing in a string here is making pyright complain.
-    res = await client.post("/user/signup", data=data.dict())
+    res = await client.post("/user/signup", json=data.dict())
     assert res.status_code == 200
     response_data = res.json()
     assert response_data.get("session_id")
@@ -64,13 +65,13 @@ async def test_new_user_sign_up(client: AsyncClient):
 
 async def test_existing_user_cant_signup(client: AsyncClient, user1: User):
     data = UserInSignup(username=user1.username, password="password12", email=user1.email)
-    res = await client.post("/user/signup", data=data.dict())
+    res = await client.post("/user/signup", json=data.dict())
     assert res.status_code == 409
 
 
 async def test_existing_user_can_login(client: AsyncClient, user1: User):
     data = UserInLogin(username=user1.username, password="password12")
-    res = await client.post("/user/login", data=data.dict())
+    res = await client.post("/user/login", json=data.dict())
     assert res.status_code == 200
     response_data = res.json()
     assert response_data.get("session_id")
@@ -79,12 +80,13 @@ async def test_existing_user_can_login(client: AsyncClient, user1: User):
 
 async def test_non_existent_user_cant_login(client: AsyncClient):
     data = UserInLogin(username="nonexistent", password="bruhwhat?")
-    res = await client.post("/user/login", data=data.dict())
+    res = await client.post("/user/login", json=data.dict())
     assert res.status_code == 404
 
 
 async def test_get_non_existent_user(client: AsyncClient):
-    res = await client.get("/user/notavaliduserid")
+    # what if it generates an ID that already exists in the database? :p
+    res = await client.get(f"/user/{uuid4()}")
     assert res.status_code == 404
 
 
