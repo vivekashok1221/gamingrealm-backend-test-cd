@@ -1,5 +1,5 @@
 # GamingRealm Backend
-
+[![API Testing](https://github.com/idkbrowby/gamingrealm-backend/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/idkbrowby/gamingrealm-backend/actions/workflows/integration-tests.yml)
 ## Architecture
 TODO: fill this in
 
