@@ -44,7 +44,7 @@ jobs:
         run: poetry install --no-interaction
       - name: Migrate tables and generate Prisma client
         env:
-          GR_DATABASE_URL=postgres://admin:adminpw@localhost:5432/gamingrealmdb
+          GR_DATABASE_URL: postgres://admin:adminpw@localhost:5432/gamingrealmdb
         run: |
           poetry run prisma db push
       - name: Run tests
