@@ -48,5 +48,9 @@ jobs:
         run: |
           poetry run prisma db push
       - name: Run tests
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          SUPABASE_BUCKET_NAME: ${{ secrets.SUPABASE_BUCKET_NAME }}
         run: |
           poetry run pytest
