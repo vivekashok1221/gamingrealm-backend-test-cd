@@ -44,6 +44,7 @@ line-length = 100
 lint = { cmd = "pre-commit run --all-files", help = "Lints project." }
 format = { cmd = "black .", help = "Runs Black autoformatter." }
 runserver = { cmd = "uvicorn --reload src.backend.app:app", help = "Runs the backend server." }
+test = { cmd = "./scripts/migrate_and_test.sh", help = "Starts a test Postgres container, generates Prisma client, runs tests and then stops the container." }
 
 [build-system]
 requires = ["poetry-core"]
