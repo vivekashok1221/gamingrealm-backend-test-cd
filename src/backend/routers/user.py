@@ -185,8 +185,7 @@ async def follow_user(
     user_id: UUID | None = Header(default=None),
 ) -> Follower:
     """Add the currently logged in user as a follower to user <uid>."""
-    print(uid, user_id)
-    if uid == user_id:
+    if uid == str(user_id):
         raise HTTPException(status_code=422, detail="User cannot follow themself.")
 
     try:
