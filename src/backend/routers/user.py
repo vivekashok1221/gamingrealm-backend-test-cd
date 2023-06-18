@@ -186,7 +186,7 @@ async def follow_user(
 ) -> Follower:
     """Add the currently logged in user as a follower to user <uid>."""
     if uid == str(user_id):
-        raise HTTPException(status_code=422, detail="User cannot follow themself.")
+        raise HTTPException(status_code=400, detail="User cannot follow themself.")
 
     try:
         follow_record = await Follower.prisma().create(
