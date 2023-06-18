@@ -191,8 +191,6 @@ async def follow_user(
     try:
         follow_record = await Follower.prisma().create(
             data={
-                "user_id": str(user_id),
-                "follows_id": uid,
                 "follows": {"connect": {"id": uid}},
                 "user": {"connect": {"id": str(user_id)}},
             }

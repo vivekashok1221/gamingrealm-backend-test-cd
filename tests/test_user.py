@@ -156,18 +156,17 @@ async def test_get_non_existent_user_followers(client: AsyncClient):
     assert len(data) == 0
 
 
-async def test_follow_user(client: AsyncClient, user1: User, logged_in_user: tuple[User, str]):
+async def test_follow_user(client: AsyncClient, user2: User, logged_in_user: tuple[User, str]):
     follower, session = logged_in_user
     headers = {"session-id": session, "user-id": follower.id}
-    res = await client.post(f"/user/{user1.id}/follow", headers=headers)
-    print(res.json())
+    res = await client.post(f"/user/{user2.id}/follow", headers=headers)
     assert res.status_code == 200
-    get_followers_res = await client.get(f"/user/{user1.id}/followers")
+    get_followers_res = await client.get(f"/user/{user2.id}/followers")
     follower_ids = [f["user_id"] for f in get_followers_res.json()]
     assert follower.id in follower_ids
     # cleanup
     await Follower.prisma().delete(
-        {"user_id_follows_id": {"follows_id": user1.id, "user_id": follower.id}}
+        {"user_id_follows_id": {"follows_id": user2.id, "user_id": follower.id}}
     )
 
 
