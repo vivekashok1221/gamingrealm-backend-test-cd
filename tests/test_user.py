@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
-from prisma.models import User
+from prisma.models import Follower, User
 from src.backend.models import UserInLogin, UserInSignup
 from src.backend.routers.user import hash_password
 
@@ -107,3 +107,79 @@ async def test_get_user_while_logged_in(
     res = await client.get(f"/user/{user2.id}", headers={"session-id": session})
     assert res.status_code == 200
     assert res.json()["is_following"] is False
+
+
+# test_x_authz_route_y is for testing the is_authorized dependency
+async def test_authz_route_no_headers(client: AsyncClient):
+    res = await client.post(f"/user/{uuid4()}/follow")
+    assert res.status_code == 400
+
+
+async def test_authz_route_invalid_session(client: AsyncClient):
+    headers = {"session-id": str(uuid4()), "user-id": str(uuid4())}
+    res = await client.post(f"/user/{uuid4()}/follow", headers=headers)
+    assert res.status_code == 440
+
+
+async def test_authz_route_valid_but_wrong_session(
+    client: AsyncClient, logged_in_user: tuple[User, str]
+):
+    user, session = logged_in_user
+    headers = {"session-id": session, "user-id": str(uuid4())}
+    res = await client.post(f"/user/{uuid4()}/follow", headers=headers)
+    assert res.status_code == 403
+
+
+"""
+async def test_get_user_followers(client: AsyncClient, user3: User, follows_user3: User):
+    res = await client.get(f"/user/{user3.id}/followers")
+    data = res.json()
+    assert res.status_code == 200
+    assert isinstance(data, list)
+    assert data[0]["follows_id"] == user3.id
+    assert data[0]["user_id"] == follows_user3.id
+"""
+
+
+async def test_get_user_followers_empty_response(client: AsyncClient, user1: User):
+    res = await client.get(f"/user/{user1.id}/followers")
+    data = res.json()
+    assert res.status_code == 200
+    assert len(data) == 0
+
+
+async def test_get_non_existent_user_followers(client: AsyncClient):
+    # the API just returns an empty list in this case also - should we error?
+    res = await client.get(f"/user/{uuid4()}/followers")
+    data = res.json()
+    assert res.status_code == 200
+    assert len(data) == 0
+
+
+async def test_follow_user(client: AsyncClient, user1: User, logged_in_user: tuple[User, str]):
+    follower, session = logged_in_user
+    headers = {"session-id": session, "user-id": follower.id}
+    res = await client.post(f"/user/{user1.id}/follow", headers=headers)
+    print(res.json())
+    assert res.status_code == 200
+    get_followers_res = await client.get(f"/user/{user1.id}/followers")
+    follower_ids = [f["user_id"] for f in get_followers_res.json()]
+    assert follower.id in follower_ids
+    # cleanup
+    await Follower.prisma().delete(
+        {"user_id_follows_id": {"follows_id": user1.id, "user_id": follower.id}}
+    )
+
+
+async def test_follow_non_existent_user(client: AsyncClient, logged_in_user: tuple[User, str]):
+    follower, session = logged_in_user
+    headers = {"session-id": session, "user-id": follower.id}
+    res = await client.post(f"/user/{uuid4()}/follow", headers=headers)
+    assert res.status_code == 422
+
+
+async def test_follow_self(client: AsyncClient, logged_in_user: tuple[User, str]):
+    follower, session = logged_in_user
+    headers = {"session-id": session, "user-id": follower.id}
+    res = await client.post(f"/user/{follower.id}/follow", headers=headers)
+    assert res.status_code == 422
