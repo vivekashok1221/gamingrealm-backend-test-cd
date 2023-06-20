@@ -6,7 +6,7 @@ from loguru import logger
 from passlib.hash import argon2
 from starlette.responses import JSONResponse
 
-from prisma.errors import PrismaError
+from prisma.errors import PrismaError, RecordNotFoundError
 from prisma.models import Follower, Post, User
 from prisma.partials import UserProfile
 from src.backend.auth.sessions import AbstractSessionStorage
@@ -195,9 +195,13 @@ async def follow_user(
                 "user": {"connect": {"id": str(user_id)}},
             }
         )
+    except RecordNotFoundError:
+        logger.info("Invalid followee User ID provided.")
+        raise HTTPException(
+            status_code=404, detail="The user you are trying to follow does not exist."
+        )
     except PrismaError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    print(follow_record)
     return follow_record
 
 

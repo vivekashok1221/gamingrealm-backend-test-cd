@@ -174,7 +174,7 @@ async def test_follow_non_existent_user(client: AsyncClient, logged_in_user: tup
     follower, session = logged_in_user
     headers = {"session-id": session, "user-id": follower.id}
     res = await client.post(f"/user/{uuid4()}/follow", headers=headers)
-    assert res.status_code == 422
+    assert res.status_code == 404
 
 
 async def test_follow_self(client: AsyncClient, logged_in_user: tuple[User, str]):
