@@ -38,7 +38,7 @@ async def set_session(
 ) -> dict[str, T]:
     """Creates session and sets cookie."""
     session = await sessions.create_session(UUID(user_profile.id))
-    return {"session_id": session.id, "user": user_profile, "message": message}  # pyright: ignore
+    return {"session-id": session.id, "user": user_profile, "message": message}  # pyright: ignore
 
 
 @router.post("/signup")
@@ -69,7 +69,7 @@ async def signup(
 
     logger.info(
         f"Account {user_profile.username}({user_profile.id}) successfully created."
-        f"\nSession {response['session_id']} successfully created"
+        f"\nSession {response['session-id']} successfully created"
     )
     return response
 
@@ -101,7 +101,7 @@ async def login(
         logger.warning(f"Deleted session {session_id} since a new session has been created.")
 
     logger.info(
-        f"Session {response['session_id']} successfully created"
+        f"Session {response['session-id']} successfully created"
         f" for {user_profile.username}({user_profile.id})."
     )
     return response
