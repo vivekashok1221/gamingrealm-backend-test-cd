@@ -47,8 +47,8 @@ async def logged_in_user(
     data = UserInLogin(username=user1.username, password="password12")
     res = await client.post("/user/login", json=data.dict())
     response_data = res.json()
-    yield user1, response_data["session_id"]
-    await client.post("/user/logout", headers={"session-id": response_data["session_id"]})
+    yield user1, response_data["session-id"]
+    await client.post("/user/logout", headers={"session-id": response_data["session-id"]})
 
 
 async def test_new_user_sign_up(client: AsyncClient):
@@ -60,7 +60,7 @@ async def test_new_user_sign_up(client: AsyncClient):
     res = await client.post("/user/signup", json=data.dict())
     assert res.status_code == 200
     response_data = res.json()
-    assert response_data.get("session_id")
+    assert response_data.get("session-id")
 
 
 async def test_existing_user_cant_signup(client: AsyncClient, user1: User):
@@ -74,8 +74,8 @@ async def test_existing_user_can_login(client: AsyncClient, user1: User):
     res = await client.post("/user/login", json=data.dict())
     assert res.status_code == 200
     response_data = res.json()
-    assert response_data.get("session_id")
-    await client.post("/user/logout", headers={"session-id": response_data["session_id"]})
+    assert response_data.get("session-id")
+    await client.post("/user/logout", headers={"session-id": response_data["session-id"]})
 
 
 async def test_non_existent_user_cant_login(client: AsyncClient):
