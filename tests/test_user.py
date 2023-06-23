@@ -4,7 +4,8 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
-from prisma.models import Follower, User
+from prisma import Prisma
+from prisma.models import User
 from src.backend.models import UserInLogin, UserInSignup
 from src.backend.routers.user import hash_password
 
@@ -13,8 +14,8 @@ pytestmark = pytest.mark.anyio
 
 @pytest.fixture(scope="package")
 @pytest.mark.anyio
-async def user1() -> AsyncGenerator[User, None]:
-    user = await User.prisma().create(
+async def user1(db: Prisma) -> AsyncGenerator[User, None]:
+    user = await db.user.create(
         {
             "username": "johndoe",
             "email": "johndoe@company.org",
@@ -22,13 +23,13 @@ async def user1() -> AsyncGenerator[User, None]:
         }
     )
     yield user
-    await User.prisma().delete(where={"id": user.id})
+    await db.user.delete(where={"id": user.id})
 
 
 @pytest.fixture(scope="package")
 @pytest.mark.anyio
-async def user2() -> AsyncGenerator[User, None]:
-    user = await User.prisma().create(
+async def user2(db: Prisma) -> AsyncGenerator[User, None]:
+    user = await db.user.create(
         {
             "username": "genericuser",
             "email": "user@megacorp.org",
@@ -36,7 +37,7 @@ async def user2() -> AsyncGenerator[User, None]:
         }
     )
     yield user
-    await User.prisma().delete(where={"id": user.id})
+    await db.user.delete(where={"id": user.id})
 
 
 @pytest.fixture(scope="package")
@@ -156,7 +157,9 @@ async def test_get_non_existent_user_followers(client: AsyncClient):
     assert len(data) == 0
 
 
-async def test_follow_user(client: AsyncClient, user2: User, logged_in_user: tuple[User, str]):
+async def test_follow_user(
+    client: AsyncClient, db: Prisma, user2: User, logged_in_user: tuple[User, str]
+):
     follower, session = logged_in_user
     headers = {"session-id": session, "user-id": follower.id}
     res = await client.post(f"/user/{user2.id}/follow", headers=headers)
@@ -165,7 +168,7 @@ async def test_follow_user(client: AsyncClient, user2: User, logged_in_user: tup
     follower_ids = [f["user_id"] for f in get_followers_res.json()]
     assert follower.id in follower_ids
     # cleanup
-    await Follower.prisma().delete(
+    await db.follower.delete(
         {"user_id_follows_id": {"follows_id": user2.id, "user_id": follower.id}}
     )
 

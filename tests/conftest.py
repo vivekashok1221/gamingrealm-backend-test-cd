@@ -2,6 +2,7 @@ import pytest
 from asgi_lifespan import LifespanManager
 from httpx import AsyncClient
 
+from prisma import Prisma
 from src.backend import app
 
 
@@ -9,6 +10,15 @@ from src.backend import app
 @pytest.fixture(scope="session")
 def anyio_backend():
     return "asyncio", {"use_uvloop": True}
+
+
+@pytest.fixture(scope="session")
+@pytest.mark.anyio
+async def db():
+    prisma = Prisma()
+    await prisma.connect()
+    yield prisma
+    await prisma.disconnect()
 
 
 @pytest.fixture(scope="session")
