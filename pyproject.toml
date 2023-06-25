@@ -30,6 +30,8 @@ flake8-bugbear = "^22.10.27"
 flake8-docstrings = "^1.6.0"
 pyright = "^1.1.279"
 faker = "^15.3.1"
+pytest = "^7.3.2"
+asgi-lifespan = "^2.1.0"
 
 [tool.isort]
 profile = "black"
@@ -42,6 +44,7 @@ line-length = 100
 lint = { cmd = "pre-commit run --all-files", help = "Lints project." }
 format = { cmd = "black .", help = "Runs Black autoformatter." }
 runserver = { cmd = "uvicorn --reload src.backend.app:app", help = "Runs the backend server." }
+test = { cmd = "./scripts/migrate_and_test.sh", help = "Starts a test Postgres container, generates Prisma client, runs tests and then stops the container." }
 
 [build-system]
 requires = ["poetry-core"]

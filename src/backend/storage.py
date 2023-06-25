@@ -15,6 +15,7 @@ BUCKET_NAME = "user-post"
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_API_KEY = os.getenv("SUPABASE_API_KEY")
+BUCKET_NAME = os.getenv("SUPABASE_BUCKET_NAME", BUCKET_NAME)
 headers = {"apiKey": SUPABASE_API_KEY, "Authorization": f"Bearer {SUPABASE_API_KEY}"}
 
 storage_client: AsyncStorageClient = create_client(
