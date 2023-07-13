@@ -4,16 +4,15 @@ datasource db {
 }
 
 generator client {
-  provider             = "prisma-client-py"
+  provider               = "prisma-client-py"
   partial_type_generator = "prisma/prisma_partial_types.py"
-  recursive_type_depth = 5
+  recursive_type_depth   = 5
 }
 
 model User {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email      String
   username   String   @db.VarChar(20)
-  password   String
   created_at DateTime @default(now())
 
   posts        Post[]
@@ -22,8 +21,15 @@ model User {
   reports      PostReport[]
   follows      Follower[]    @relation("Follower")
   followers    Follower[]    @relation("Followed")
+  password     Password? // although password is marked optional here, every user MUST have a row in the passwords table
 
   @@index([username])
+}
+
+model Password {
+  user_id  String @unique @db.Uuid
+  user     User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  password String
 }
 
 model Follower {
