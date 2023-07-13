@@ -146,7 +146,7 @@ async def get_user(
         raise HTTPException(status_code=404, detail="User not found.")
     followers = await Follower.prisma().count(where={"follows_id": user_id})
     following = await Follower.prisma().count(where={"user_id": user_id})
-    posts = await paginate(Post, page_size=10)
+    posts = await paginate(Post, page_size=10, where={"author_id": user_id})
     posts_count = await Post.prisma().count(where={"author_id": user_id})
     if session_id:
         current_user = await sessions.get_session(session_id)
