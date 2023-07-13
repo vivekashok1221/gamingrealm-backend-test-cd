@@ -78,6 +78,24 @@ async def create_post(
     return response
 
 
+@router.get("/search")
+async def search_posts(
+    q: str = Query(),
+) -> Page[Post]:
+    """Gets posts based on specified query.
+
+    Matching is done using Full Text Search
+    """
+    words = q.split()
+    search_phrase = " & ".join(words)
+    query = (
+        'SELECT * from "Post" WHERE to_tsvector("title") @@ to_tsquery($1)'
+        ' ORDER BY "created_at" LIMIT 20'
+    )
+    posts = await Post.prisma().query_raw(query, search_phrase)
+    return Page(data=posts, count=len(posts), cursor_id=None)
+
+
 @router.get("/{id}")
 async def get_post(id: str) -> dict:
     """Get full details of a specific post."""
