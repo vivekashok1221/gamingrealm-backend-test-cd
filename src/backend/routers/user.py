@@ -91,7 +91,7 @@ async def login(
 
     user: User | None = await User.prisma().find_first(where={"username": username})
     if user is None:
-        raise HTTPException(status_code=404, detail="User does not exist")
+        raise HTTPException(status_code=404, detail="The username or password is incorrect.")
     db_pw = await Password.prisma().find_first(where={"user_id": user.id})
     # this case should NEVER happen, but we include it here for type-safety
     if db_pw is None:
