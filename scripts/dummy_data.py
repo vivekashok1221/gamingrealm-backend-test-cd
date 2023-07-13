@@ -10,7 +10,17 @@ from passlib.hash import argon2
 
 from prisma import Prisma
 from prisma.errors import PrismaError
-from prisma.models import Follower, Post, PostComment, PostMedia, PostRating, PostReport, Tag, User
+from prisma.models import (
+    Follower,
+    Password,
+    Post,
+    PostComment,
+    PostMedia,
+    PostRating,
+    PostReport,
+    Tag,
+    User,
+)
 
 fake = Faker()
 Faker.seed(0)
@@ -35,17 +45,14 @@ async def _clear_database() -> None:
 
 
 async def _create_users(n: int = 20) -> list[User]:
-    fake_profiles = []
     for _ in range(n):
         profile = fake.simple_profile()
-        fake_profiles.append(
-            {
-                "username": profile["username"],
-                "email": profile["mail"],
-                "password": await hash_password("abcdefg"),
-            }
+        user = await User.prisma().create(
+            {"username": profile["username"], "email": profile["mail"]}
         )
-    await User.prisma().create_many(fake_profiles)
+        await Password.prisma().create(
+            {"user": {"connect": {"id": user.id}}, "password": await hash_password("abcdefg")}
+        )
     logger.info(f"Created {n} users")
     users = await User.prisma().find_many()
     count = 0

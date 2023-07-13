@@ -7,7 +7,6 @@ from loguru import logger
 
 from prisma.errors import PrismaError
 from prisma.models import Post, PostComment, PostMedia, PostRating
-from prisma.partials import UserProfile
 from src.backend.dependencies import is_authorized
 from src.backend.models import PostDetails
 from src.backend.paginate_db import Page, paginate
@@ -41,7 +40,6 @@ async def get_posts(
         Post,
         take,
         cursor,
-        f=_remove_pw_from_post_author,
         where=filters,
         include={"tags": True, "author": True},
         order={"created_at": "desc"},
@@ -91,7 +89,6 @@ async def get_post(id: str) -> dict:
     comments = await paginate(
         PostComment,
         page_size=20,
-        f=_remove_pw_from_post_author,
         where={"post_id": id},
         include={"author": True},
         order={"created_at": "desc"},
@@ -162,7 +159,6 @@ async def get_comments(
         PostComment,
         take,
         cursor,
-        f=_remove_pw_from_post_author,
         where={"post_id": post_id},
         include={"author": True},
         order={"created_at": "desc"},
@@ -187,11 +183,6 @@ async def delete_comment(
             {"message": "Comment does not exist under the given username"}, status_code=400
         )
     return JSONResponse({"message": "Comment deleted"}, status_code=200)
-
-
-def _remove_pw_from_post_author(p):  # noqa: ANN001, ANN202
-    p.author = UserProfile(**p.author.dict())  # type: ignore
-    return p
 
 
 router.include_router(authz_router)

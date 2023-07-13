@@ -4,14 +4,16 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr, validator
 
 from prisma.models import Post, PostComment
-from prisma.partials import UserInLogin_
 from src.backend.paginate_db import Page
 
 USERNAME_RE = re.compile("^[A-Za-z0-9_-]*$")
 
 
-class UserInLogin(UserInLogin_):
+class UserInLogin(BaseModel):
     """Model representing user at login."""
+
+    username: str
+    password: str
 
     @validator("username")
     def _validate_username(cls, username: str) -> str:
