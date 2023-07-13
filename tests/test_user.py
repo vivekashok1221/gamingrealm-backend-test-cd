@@ -19,8 +19,10 @@ async def user1(db: Prisma) -> AsyncGenerator[User, None]:
         {
             "username": "johndoe",
             "email": "johndoe@company.org",
-            "password": await hash_password("password12"),
         }
+    )
+    await db.password.create(
+        {"user": {"connect": {"id": user.id}}, "password": await hash_password("password12")}
     )
     yield user
     await db.user.delete(where={"id": user.id})
@@ -33,8 +35,10 @@ async def user2(db: Prisma) -> AsyncGenerator[User, None]:
         {
             "username": "genericuser",
             "email": "user@megacorp.org",
-            "password": await hash_password("supersafe!"),
         }
+    )
+    await db.password.create(
+        {"user": {"connect": {"id": user.id}}, "password": await hash_password("supersafe!")}
     )
     yield user
     await db.user.delete(where={"id": user.id})
