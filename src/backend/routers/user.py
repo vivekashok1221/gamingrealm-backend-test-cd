@@ -95,6 +95,9 @@ async def login(
     db_pw = await Password.prisma().find_first(where={"user_id": user.id})
     # this case should NEVER happen, but we include it here for type-safety
     if db_pw is None:
+        logger.error(
+            f"Attempted logging in {username=} who does not have a password saved in the database."
+        )
         raise HTTPException(status_code=404, detail="User exists but does not have a password")
     if not await check_password(password, db_pw.password):
         raise HTTPException(status_code=404, detail="The username or password is incorrect.")
