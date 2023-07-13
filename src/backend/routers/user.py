@@ -7,7 +7,7 @@ from passlib.hash import argon2
 from starlette.responses import JSONResponse
 
 from prisma.errors import PrismaError, RecordNotFoundError
-from prisma.models import Follower, Post, User
+from prisma.models import Follower, Password, Post, User
 from prisma.partials import UserProfile
 from src.backend.auth.sessions import AbstractSessionStorage
 from src.backend.dependencies import get_sessions, is_authorized
@@ -61,10 +61,12 @@ async def signup(
         logger.debug("Sign up attempted with username or email which already exists.")
         raise HTTPException(status_code=409, detail="The username or email already exists")
 
-    user = await User.prisma().create(
-        data={"username": username, "email": email, "password": await hash_password(password)}
+    user = await User.prisma().create(data={"username": username, "email": email})
+    # as the password is in a separate table we need a separate insert statement here,
+    await Password.prisma().create(
+        {"user": {"connect": {"id": user.id}}, "password": await hash_password(password)}
     )
-    user_profile = UserProfile(**user.dict(exclude={"password"}))
+    user_profile = UserProfile(**user.dict())
     response: dict[str, T] = await set_session(user_profile, sessions, message="Account created.")
 
     logger.info(
@@ -88,10 +90,15 @@ async def login(
     password = user_login.password
 
     user: User | None = await User.prisma().find_first(where={"username": username})
-
-    if user is None or (not await check_password(password, user.password)):
+    if user is None:
+        raise HTTPException(status_code=404, detail="User does not exist")
+    db_pw = await Password.prisma().find_first(where={"user_id": user.id})
+    # this case should NEVER happen, but we include it here for type-safety
+    if db_pw is None:
+        raise HTTPException(status_code=404, detail="User exists but does not have a password")
+    if not await check_password(password, db_pw.password):
         raise HTTPException(status_code=404, detail="The username or password is incorrect.")
-    user_profile = UserProfile(**user.dict(exclude={"password"}))
+    user_profile = UserProfile(**user.dict())
     response: dict[str, T] = await set_session(
         user_profile, sessions, message="Successfully logged in."
     )
@@ -130,7 +137,6 @@ async def get_user(
 
     Returns user profile data (including number of followers, following, posts).
     """
-    print(user_id)
     user = await User.prisma().find_first(where={"id": user_id})
     if not user:
         logger.debug(f"User {user_id} not found")
