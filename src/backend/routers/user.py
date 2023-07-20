@@ -11,7 +11,7 @@ from prisma.models import Follower, Password, Post, User
 from prisma.partials import UserProfile
 from src.backend.auth.sessions import AbstractSessionStorage
 from src.backend.dependencies import get_sessions, is_authorized
-from src.backend.models import UserInLogin, UserInSignup, UserProfileResponse
+from src.backend.models import LoginSuccessResponse, UserInLogin, UserInSignup, UserProfileResponse
 from src.backend.paginate_db import paginate
 
 router = APIRouter(prefix="/user")
@@ -35,20 +35,22 @@ async def check_password(password: str, hash_: str) -> bool:
 
 async def set_session(
     user_profile: UserProfile, sessions: AbstractSessionStorage, message: str
-) -> dict[str, T]:
+) -> LoginSuccessResponse:
     """Creates session and sets cookie."""
     session = await sessions.create_session(UUID(user_profile.id))
-    return {"session-id": session.id, "user": user_profile, "message": message}  # pyright: ignore
+    return LoginSuccessResponse(
+        **{"session-id": session.id, "user": user_profile, "message": message}
+    )
 
 
 @router.post("/signup")
 async def signup(
     user_login: UserInSignup = Body(),
     sessions: AbstractSessionStorage = Depends(get_sessions),
-) -> dict[str, T]:
+) -> LoginSuccessResponse:
     """Endpoint to sign up a user.
 
-    Returns session id and user details except password if authentication is successful.
+    Returns session id and user details if authentication is successful.
     """
     username = user_login.username
     password = user_login.password
@@ -67,11 +69,11 @@ async def signup(
         {"user": {"connect": {"id": user.id}}, "password": await hash_password(password)}
     )
     user_profile = UserProfile(**user.dict())
-    response: dict[str, T] = await set_session(user_profile, sessions, message="Account created.")
+    response = await set_session(user_profile, sessions, message="Account created.")
 
     logger.info(
         f"Account {user_profile.username}({user_profile.id}) successfully created."
-        f"\nSession {response['session-id']} successfully created"
+        f"\nSession {response.session_id} successfully created"
     )
     return response
 
@@ -81,10 +83,10 @@ async def login(
     user_login: UserInLogin,
     session_id: UUID | None = Header(default=None, alias="session-id"),
     sessions: AbstractSessionStorage = Depends(get_sessions),
-) -> dict[str, T]:
+) -> LoginSuccessResponse:
     """Endpoint to authenticate a user. Validation is done on form data before querying DB.
 
-    Returns session id and user details except password if authentication is successful.
+    Returns session id and user details if authentication is successful.
     """
     username = user_login.username
     password = user_login.password
@@ -102,16 +104,14 @@ async def login(
     if not await check_password(password, db_pw.password):
         raise HTTPException(status_code=404, detail="The username or password is incorrect.")
     user_profile = UserProfile(**user.dict())
-    response: dict[str, T] = await set_session(
-        user_profile, sessions, message="Successfully logged in."
-    )
+    response = await set_session(user_profile, sessions, message="Successfully logged in.")
 
     if session_id is not None and session_id in sessions:  # Checking for duplicate session.
         await sessions.delete_session(session_id)
         logger.warning(f"Deleted session {session_id} since a new session has been created.")
 
     logger.info(
-        f"Session {response['session-id']} successfully created"
+        f"Session {response.session_id} successfully created"
         f" for {user_profile.username}({user_profile.id})."
     )
     return response
