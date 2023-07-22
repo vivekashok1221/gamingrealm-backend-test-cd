@@ -181,14 +181,14 @@ async def get_user(
     return UserProfileResponse(**data)
 
 
-@router.get("/{uid}/followers", response_model=list[Follower])
+@router.get("/{uid}/followers")
 async def get_user_followers(uid: str) -> list[Follower]:
     """Get the specified user's followers."""
     followers = await Follower.prisma().find_many(where={"follows_id": uid})
     return followers
 
 
-@authz_router.post("/{uid}/follow", response_model=Follower)
+@authz_router.post("/{uid}/follow")
 async def follow_user(
     uid: str,
     user_id: UUID | None = Header(default=None),
@@ -214,7 +214,7 @@ async def follow_user(
     return follow_record
 
 
-@authz_router.post("/{uid}/unfollow", response_model=Follower)
+@authz_router.post("/{uid}/unfollow")
 async def unfollow_user(
     uid: str,
     user_id: UUID | None = Header(default=None),
