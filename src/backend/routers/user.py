@@ -1,24 +1,26 @@
-from typing import TypeVar
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from loguru import logger
 from passlib.hash import argon2
-from starlette.responses import JSONResponse
 
 from prisma.errors import PrismaError, RecordNotFoundError
 from prisma.models import Follower, Password, Post, User
 from prisma.partials import UserProfile
 from src.backend.auth.sessions import AbstractSessionStorage
 from src.backend.dependencies import get_sessions, is_authorized
-from src.backend.models import UserInLogin, UserInSignup, UserProfileResponse
+from src.backend.models import (
+    LoginSuccessResponse,
+    MessageResponse,
+    UserInLogin,
+    UserInSignup,
+    UserProfileResponse,
+)
 from src.backend.paginate_db import paginate
 
 router = APIRouter(prefix="/user")
 authz_router = APIRouter(dependencies=[Depends(is_authorized)])
 COOKIE_MAX_AGE = 30 * 24 * 60 * 60  # 2592000 seconds (30 days)
-
-T = TypeVar("T", UUID, UserProfile, str)
 
 
 async def hash_password(password: str) -> str:
@@ -35,20 +37,22 @@ async def check_password(password: str, hash_: str) -> bool:
 
 async def set_session(
     user_profile: UserProfile, sessions: AbstractSessionStorage, message: str
-) -> dict[str, T]:
+) -> LoginSuccessResponse:
     """Creates session and sets cookie."""
     session = await sessions.create_session(UUID(user_profile.id))
-    return {"session-id": session.id, "user": user_profile, "message": message}  # pyright: ignore
+    return LoginSuccessResponse(
+        **{"session-id": str(session.id), "user": user_profile, "message": message}
+    )
 
 
 @router.post("/signup")
 async def signup(
     user_login: UserInSignup = Body(),
     sessions: AbstractSessionStorage = Depends(get_sessions),
-) -> dict[str, T]:
+) -> LoginSuccessResponse:
     """Endpoint to sign up a user.
 
-    Returns session id and user details except password if authentication is successful.
+    Returns session id and user details if authentication is successful.
     """
     username = user_login.username
     password = user_login.password
@@ -67,11 +71,11 @@ async def signup(
         {"user": {"connect": {"id": user.id}}, "password": await hash_password(password)}
     )
     user_profile = UserProfile(**user.dict())
-    response: dict[str, T] = await set_session(user_profile, sessions, message="Account created.")
+    response = await set_session(user_profile, sessions, message="Account created.")
 
     logger.info(
         f"Account {user_profile.username}({user_profile.id}) successfully created."
-        f"\nSession {response['session-id']} successfully created"
+        f"\nSession {response.session_id} successfully created"
     )
     return response
 
@@ -81,10 +85,10 @@ async def login(
     user_login: UserInLogin,
     session_id: UUID | None = Header(default=None, alias="session-id"),
     sessions: AbstractSessionStorage = Depends(get_sessions),
-) -> dict[str, T]:
+) -> LoginSuccessResponse:
     """Endpoint to authenticate a user. Validation is done on form data before querying DB.
 
-    Returns session id and user details except password if authentication is successful.
+    Returns session id and user details if authentication is successful.
     """
     username = user_login.username
     password = user_login.password
@@ -102,16 +106,14 @@ async def login(
     if not await check_password(password, db_pw.password):
         raise HTTPException(status_code=404, detail="The username or password is incorrect.")
     user_profile = UserProfile(**user.dict())
-    response: dict[str, T] = await set_session(
-        user_profile, sessions, message="Successfully logged in."
-    )
+    response = await set_session(user_profile, sessions, message="Successfully logged in.")
 
     if session_id is not None and session_id in sessions:  # Checking for duplicate session.
         await sessions.delete_session(session_id)
         logger.warning(f"Deleted session {session_id} since a new session has been created.")
 
     logger.info(
-        f"Session {response['session-id']} successfully created"
+        f"Session {response.session_id} successfully created"
         f" for {user_profile.username}({user_profile.id})."
     )
     return response
@@ -121,13 +123,13 @@ async def login(
 async def logout(
     session_id: UUID = Header(default=None),
     sessions: AbstractSessionStorage = Depends(get_sessions),
-) -> JSONResponse:
+) -> MessageResponse:
     """Endpoint to log out a user. The header must include session-id.
 
     Session is deleted from session storage. Client has to delete session cookie.
     """
     await sessions.delete_session(session_id)
-    return JSONResponse(status_code=200, content=f"Session {session_id} deleted.")
+    return MessageResponse(message=f"Session {session_id} deleted.")
 
 
 @router.get("/{user_id}", response_model=UserProfileResponse)
@@ -181,14 +183,14 @@ async def get_user(
     return UserProfileResponse(**data)
 
 
-@router.get("/{uid}/followers", response_model=list[Follower])
+@router.get("/{uid}/followers")
 async def get_user_followers(uid: str) -> list[Follower]:
     """Get the specified user's followers."""
     followers = await Follower.prisma().find_many(where={"follows_id": uid})
     return followers
 
 
-@authz_router.post("/{uid}/follow", response_model=Follower)
+@authz_router.post("/{uid}/follow")
 async def follow_user(
     uid: str,
     user_id: UUID | None = Header(default=None),
@@ -214,7 +216,7 @@ async def follow_user(
     return follow_record
 
 
-@authz_router.post("/{uid}/unfollow", response_model=Follower)
+@authz_router.post("/{uid}/unfollow")
 async def unfollow_user(
     uid: str,
     user_id: UUID | None = Header(default=None),

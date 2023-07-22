@@ -1,9 +1,10 @@
 import re
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, Field, validator
 
 from prisma.models import Post, PostComment
+from prisma.partials import UserProfile
 from src.backend.paginate_db import Page
 
 USERNAME_RE = re.compile("^[A-Za-z0-9_-]*$")
@@ -61,3 +62,30 @@ class PostDetails(BaseModel):
     post: Post
     comments: Page[PostComment]
     avg_rating: int
+
+
+class LoginSuccessResponse(BaseModel):
+    """Data returned on succesful login (or sign up)."""
+
+    user: UserProfile
+    message: str
+    session_id: str = Field(alias="session-id")
+
+
+class MessageResponse(BaseModel):
+    """Model returned by endpoints that just return a message."""
+
+    message: str
+
+
+class CreatePostResponse(BaseModel):
+    """Data returned when a new post is created."""
+
+    id: str
+    author_id: str
+    title: str
+    text_content: str
+    created_at: datetime
+    updated_at: datetime
+    deleted: bool
+    urls: list[str]
