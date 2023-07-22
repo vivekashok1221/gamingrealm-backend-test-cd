@@ -70,3 +70,22 @@ class LoginSuccessResponse(BaseModel):
     user: UserProfile
     message: str
     session_id: str = Field(alias="session-id")
+
+
+class MessageResponse(BaseModel):
+    """Model returned by endpoints that just return a message."""
+
+    message: str
+
+
+class CreatePostResponse(BaseModel):
+    """Data returned when a new post is created."""
+
+    id: str
+    author_id: str
+    title: str
+    text_content: str
+    created_at: datetime
+    updated_at: datetime
+    deleted: bool
+    urls: list[str]

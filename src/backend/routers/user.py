@@ -4,14 +4,19 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from loguru import logger
 from passlib.hash import argon2
-from starlette.responses import JSONResponse
 
 from prisma.errors import PrismaError, RecordNotFoundError
 from prisma.models import Follower, Password, Post, User
 from prisma.partials import UserProfile
 from src.backend.auth.sessions import AbstractSessionStorage
 from src.backend.dependencies import get_sessions, is_authorized
-from src.backend.models import LoginSuccessResponse, UserInLogin, UserInSignup, UserProfileResponse
+from src.backend.models import (
+    LoginSuccessResponse,
+    MessageResponse,
+    UserInLogin,
+    UserInSignup,
+    UserProfileResponse,
+)
 from src.backend.paginate_db import paginate
 
 router = APIRouter(prefix="/user")
@@ -39,7 +44,7 @@ async def set_session(
     """Creates session and sets cookie."""
     session = await sessions.create_session(UUID(user_profile.id))
     return LoginSuccessResponse(
-        **{"session-id": session.id, "user": user_profile, "message": message}
+        **{"session-id": str(session.id), "user": user_profile, "message": message}
     )
 
 
@@ -121,13 +126,13 @@ async def login(
 async def logout(
     session_id: UUID = Header(default=None),
     sessions: AbstractSessionStorage = Depends(get_sessions),
-) -> JSONResponse:
+) -> MessageResponse:
     """Endpoint to log out a user. The header must include session-id.
 
     Session is deleted from session storage. Client has to delete session cookie.
     """
     await sessions.delete_session(session_id)
-    return JSONResponse(status_code=200, content=f"Session {session_id} deleted.")
+    return MessageResponse(message=f"Session {session_id} deleted.")
 
 
 @router.get("/{user_id}", response_model=UserProfileResponse)

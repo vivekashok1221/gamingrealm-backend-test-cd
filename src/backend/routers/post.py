@@ -1,14 +1,13 @@
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Form, Header, HTTPException, Query, UploadFile
-from fastapi.responses import JSONResponse
 from loguru import logger
 
 from prisma.errors import PrismaError
 from prisma.models import Post, PostComment, PostMedia, PostRating
 from src.backend.dependencies import is_authorized
-from src.backend.models import PostDetails
+from src.backend.models import CreatePostResponse, MessageResponse, PostDetails
 from src.backend.paginate_db import Page, paginate
 from src.backend.storage import _upload_to_storage
 
@@ -46,13 +45,13 @@ async def get_posts(
     )
 
 
-@authz_router.post("/create")
+@authz_router.post("/create", response_model=CreatePostResponse)
 async def create_post(
     title: Annotated[str, Form()],
-    text_content: Annotated[str, Form()] = None,
+    text_content: Annotated[str | None, Form()] = None,
     images: list[UploadFile] | None = None,
     user_id: UUID | None = Header(default=None),
-) -> JSONResponse:
+) -> dict[str, Any]:
     """Create a new post."""
     try:
         inserted_post = await Post.prisma().create(
@@ -97,7 +96,7 @@ async def search_posts(
 
 
 @router.get("/{id}")
-async def get_post(id: str) -> dict:
+async def get_post(id: str) -> PostDetails:
     """Get full details of a specific post."""
     post = await Post.prisma().find_first(
         where={"id": id, "deleted": False}, include={"tags": True, "media": True, "author": True}
@@ -115,14 +114,14 @@ async def get_post(id: str) -> dict:
         by=["post_id"], avg={"value": True}, having={"post_id": id}
     )
     avg_rating = round(avg_rating_query[0]["_avg"]["value"])  # type: ignore
-    return PostDetails(post=post, comments=comments, avg_rating=avg_rating).dict()
+    return PostDetails(post=post, comments=comments, avg_rating=avg_rating)
 
 
 @authz_router.delete("/{id}")
 async def delete_post(
     id: str,
     user_id: UUID | None = Header(default=None),
-) -> JSONResponse:
+) -> MessageResponse:
     """Delete a post."""
     try:
         # this endpoint only soft-deletes
@@ -136,11 +135,11 @@ async def delete_post(
         logger.warning(f"Could not delete post: {e}")
         raise HTTPException(400, "Could not delete the post due to an internal error")
     if not deleted_post:
-        return JSONResponse({"message": "Post did not exist"}, status_code=400)
-    return JSONResponse({"message": "Post deleted"}, status_code=200)
+        raise HTTPException(404, "Post not found")
+    return MessageResponse(message="Post deleted.")
 
 
-@authz_router.post("/{post_id}/comments", response_model=PostComment)
+@authz_router.post("/{post_id}/comments")
 async def create_comment(
     post_id: str,
     comment_text: str = Body(),
@@ -187,7 +186,7 @@ async def get_comments(
 async def delete_comment(
     comment_id: str,
     user_id: UUID | None = Header(default=None),
-) -> JSONResponse:
+) -> MessageResponse:
     """Endpoint to delete a comment."""
     try:
         deleted_comment = await PostComment.prisma().delete_many(
@@ -197,10 +196,8 @@ async def delete_comment(
         logger.warning(f"Could not delete comment: {e}")
         raise HTTPException(400, "Could not delete the comment due to an internal error")
     if not deleted_comment:
-        return JSONResponse(
-            {"message": "Comment does not exist under the given username"}, status_code=400
-        )
-    return JSONResponse({"message": "Comment deleted"}, status_code=200)
+        raise HTTPException(404, "The current user has not created a comment with the provided ID.")
+    return MessageResponse(message="Comment deleted.")
 
 
 router.include_router(authz_router)
