@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from prisma.models import Tag
 
-router = APIRouter(prefix="/tags")
+router = APIRouter(prefix="/tags", tags=["tags"])
 
 
 @router.get("/", response_model=list[Tag])

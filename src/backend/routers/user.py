@@ -18,7 +18,7 @@ from src.backend.models import (
 )
 from src.backend.paginate_db import paginate
 
-router = APIRouter(prefix="/user")
+router = APIRouter(prefix="/user", tags=["user"])
 authz_router = APIRouter(dependencies=[Depends(is_authorized)])
 COOKIE_MAX_AGE = 30 * 24 * 60 * 60  # 2592000 seconds (30 days)
 

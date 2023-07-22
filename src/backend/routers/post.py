@@ -11,7 +11,7 @@ from src.backend.models import CreatePostResponse, MessageResponse, PostDetails
 from src.backend.paginate_db import Page, paginate
 from src.backend.storage import _upload_to_storage
 
-router = APIRouter(prefix="/post")
+router = APIRouter(prefix="/post", tags=["post"])
 authz_router = APIRouter(dependencies=[Depends(is_authorized)])
 
 
