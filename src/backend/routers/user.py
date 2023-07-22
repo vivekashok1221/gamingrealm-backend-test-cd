@@ -1,4 +1,3 @@
-from typing import TypeVar
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException
@@ -22,8 +21,6 @@ from src.backend.paginate_db import paginate
 router = APIRouter(prefix="/user")
 authz_router = APIRouter(dependencies=[Depends(is_authorized)])
 COOKIE_MAX_AGE = 30 * 24 * 60 * 60  # 2592000 seconds (30 days)
-
-T = TypeVar("T", UUID, UserProfile, str)
 
 
 async def hash_password(password: str) -> str:
