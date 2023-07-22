@@ -1,9 +1,19 @@
 name: CI / CD
 
-on: [pull_request, push, workflow_dispatch]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
 
 jobs:
+  test:
+    uses: ./.github/workflows/integration-tests.yml
+
   build-and-push:
+    if: github.ref == 'refs/heads/main'
+    needs: test
     permissions:
       contents: read
       packages: write
