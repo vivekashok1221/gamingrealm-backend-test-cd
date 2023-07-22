@@ -37,4 +37,4 @@ app.add_middleware(
 @app.get("/ping")
 async def ping() -> dict[str, str]:
     """API Ping endpoint."""
-    return {"message": "Pong!"}
+    return {"message": "Poooooong!"}
