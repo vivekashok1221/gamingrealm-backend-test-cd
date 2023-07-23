@@ -27,8 +27,8 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ${{ inputs.REGISTRY }}/${{ inputs.IMAGE_NAME }}
-          tags: type=sha
           flavor: latest=true
+          tags: type=sha, priority=1, prefix=
 #      - run: |
 #          echo ${{ steps.meta.outputs.tags }}
 #          echo "hi"
