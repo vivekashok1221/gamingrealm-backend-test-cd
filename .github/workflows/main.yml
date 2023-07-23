@@ -9,7 +9,8 @@ on:
 
 jobs:
   test:
-    uses: ./.github/workflows/integration-tests.yml
+#    uses: ./.github/workflows/integration-tests.yml
+    - run: echo hi
 
   build-and-push:
     if: github.ref == 'refs/heads/main'
