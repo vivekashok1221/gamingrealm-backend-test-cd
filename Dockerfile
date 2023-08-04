@@ -19,8 +19,6 @@ COPY prisma/prisma_partial_types.py ./prisma/
 
 RUN poetry run prisma generate
 
-RUN poetry run prisma migrate deploy
-
 COPY . .
 
 ENTRYPOINT ["./scripts/entrypoint.sh"]

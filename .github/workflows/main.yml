@@ -8,17 +8,21 @@ on:
   workflow_dispatch:
 
 jobs:
-#  test:
-##    uses: ./.github/workflows/integration-tests.yml
-#    run: echo hi
+  test:
+    uses: ./.github/workflows/integration-tests.yml
 
   build-and-push:
     if: github.ref == 'refs/heads/main'
-#    needs: test
+    needs: test
     permissions:
       contents: read
       packages: write
-    uses: ./.github/workflows/publish-and-deploy.yml
+    uses: ./.github/workflows/build-and-publish.yml
     with:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build-and-push
+    uses: ./.github/workflows/deploy.yml

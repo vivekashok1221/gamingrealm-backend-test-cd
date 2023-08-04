@@ -29,9 +29,6 @@ jobs:
           images: ${{ inputs.REGISTRY }}/${{ inputs.IMAGE_NAME }}
           flavor: latest=true
           tags: type=sha, priority=1, prefix=
-#      - run: |
-#          echo ${{ steps.meta.outputs.tags }}
-#          echo "hi"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Build and push Docker image
