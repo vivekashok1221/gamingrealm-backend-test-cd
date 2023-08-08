@@ -7,8 +7,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Watchtower on VPS
-        run: echo ${{secrets.WATCHTOWER_TOKEN }} | sed 's/./& /g'
-
-        # run: |
-        #   curl -H "Authorization: Bearer ${{ secrets.WATCHTOWER_TOKEN }}" https://watchtower.lnkshrt.xyz/v1/update
-
+        run: |
+           curl -H "Authorization: Bearer ${{ secrets.WATCHTOWER_TOKEN }}" https://watchtower.lnkshrt.xyz/v1/update
