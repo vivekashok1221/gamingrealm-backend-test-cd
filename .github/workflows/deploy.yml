@@ -10,4 +10,4 @@ jobs:
         env:
           WATCHTOWER_TOKEN: ${{ secrets.WATCHTOWER_TOKEN }}
         run: |
-           curl -H "Authorization: Bearer test" https://watchtower.lnkshrt.xyz/v1/update
+          curl -H "Authorization: Bearer $WATCHTOWER_TOKEN" https://watchtower.lnkshrt.xyz/v1/update
